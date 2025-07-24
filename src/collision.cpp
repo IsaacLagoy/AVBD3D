@@ -13,6 +13,21 @@ struct SupportPoint {
     }
 };
 
+struct SupportPointHash {
+    size_t operator()(const SupportPoint& sp) const {
+        size_t h1 = std::hash<int>{}(sp.indexA);
+        size_t h2 = std::hash<int>{}(sp.indexB);
+        return h1 ^ (h2 << 1);  // combine hashes
+    }
+};
+
+struct SupportPointEqual {
+    bool operator()(const SupportPoint& a, const SupportPoint& b) const {
+        return a.indexA == b.indexA && a.indexB == b.indexB;
+    }
+};
+
+
 using Simplex = UnorderedArray<SupportPoint, 4>;
 
 enum Index { A, B, C, D };
@@ -56,7 +71,9 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     Simplex simplex = Simplex(); // can prolly go on the stack idk, there's only one rn
     bool collided = gjk(bodyA, bodyB, simplex);
 
-    print("entering epa");
+    // print("entering epa");
+
+    if (!collided) return 0;
 
     epa(bodyA, bodyB, simplex);
     
@@ -164,37 +181,24 @@ struct Face {
     }
 
     // overrides edge reference with indexed edge from face
-    void overrideEdge(int i, Edge& edge) {
+    void overrideEdge(int i, Edge& edge) const {
         edge = { sps[i % 3], sps[(i + 1) % 3] }; 
     }
 };
 
-using FacePtr = std::unique_ptr<Face>;
-
 struct Compare {
-    using is_transparent = void; // enables heterogeneous lookup
-
     // Compare FacePtrs
-    bool operator()(const FacePtr& a, const FacePtr& b) const {
-        return a->distance > b->distance;
-    }
-
-    // Compare FacePtr with Face*
-    bool operator()(const FacePtr& a, const Face* b) const {
-        return a->distance > b->distance;
-    }
-
-    bool operator()(const Face* a, const FacePtr& b) const {
-        return a->distance > b->distance;
+    bool operator()(const Face& a, const Face& b) const {
+        return a.distance > b.distance;
     }
 };
 
 
 struct Polytope {
-    std::set<SupportPoint> sps;
+    std::unordered_map<SupportPoint, std::shared_ptr<SupportPoint>, SupportPointHash, SupportPointEqual> sps;
 
     // Min-heap based on face distance to origin
-    std::set<FacePtr, Compare> pq;
+    std::set<Face, Compare> pq;
 
     // used for tracking centroid when origin fails
     vec3 vertTot;
@@ -205,12 +209,21 @@ struct Polytope {
 
         // capture iterators or pointers for stable access
         std::vector<const SupportPoint*> pts;
-        for (const auto& sp : sps) {
-            pts.push_back(&sp);
+        pts.reserve(4);  // avoid reallocations
+        for (const auto& [key, sptr] : sps) {
+            pts.push_back(sptr.get());
             if (pts.size() == 4) break;
         }
 
-        print("vectorized faces");
+        if (pts.size() < 3) {
+            throw std::runtime_error("Not enough support points to build face!");
+        }
+
+        for (const auto& [key, sptr] : sps) {
+            if (!sptr) throw std::runtime_error("Null shared_ptr in sps!");
+        }
+
+        // print("vectorized faces");
 
         // add faces with correct combinations
         add(buildFace(pts[0], pts[1], pts[2]));
@@ -224,86 +237,57 @@ struct Polytope {
     }
 
     // add support points and faces to the polytope
-    const SupportPoint* add(SupportPoint sp) {
+    const SupportPoint* add(const SupportPoint& sp) {
         vertTot += sp.mink;
-        auto [it, inserted] = sps.insert(sp);
-        return &(*it);
+
+        // Check if SupportPoint already exists
+        auto it = sps.find(sp);
+        if (it != sps.end()) {
+            // Already present, return stored pointer
+            return it->second.get();
+        }
+
+        // Not present, create new shared_ptr and insert
+        auto spPtr = std::make_shared<SupportPoint>(sp);
+        auto [insertedIt, inserted] = sps.emplace(*spPtr, spPtr);
+
+        return insertedIt->second.get();
     }
-    void add(FacePtr face) { pq.insert(std::move(face)); }
+
+    void add(Face face) { pq.insert(face); }
 
     // create new faces using existing points
-    FacePtr buildFace(const SupportPoint* pa, const SupportPoint* pb, const SupportPoint* pc) {
+    Face buildFace(const SupportPoint* pa, const SupportPoint* pb, const SupportPoint* pc) {
         const vec3& av = pa->mink;
         const vec3& bv = pb->mink;
         const vec3& cv = pc->mink;
 
-        print(1);
-
-        FacePtr face = std::make_unique<Face>();
-
-        print(2);
+        Face face = Face();
 
         vec3 centerFace = (av + bv + cv) / 3.0f;
-        face->distance = glm::length2(centerFace); // distance can be squared since it is only used for positive comparisons
-        face->normal = glm::cross(av - bv, av - cv);
-        face->sps = { pa, pb, pc };
-
-        print(3);
+        face.distance = glm::length2(centerFace); // distance can be squared since it is only used for positive comparisons
+        face.normal = glm::cross(av - bv, av - cv);
+        face.sps = { pa, pb, pc };
 
         // test if face is coplanar with the origin. if so, use the polytope center instead of origin to determine normal direction
         vec3 midpoint = vec3(0);
-        if (std::abs(glm::dot(face->normal, av)) < 1e-6f) glm::vec3 midpoint = vertTot / (float) sps.size();
-
-        print(4);
+        if (std::abs(glm::dot(face.normal, av)) < 1e-6f) glm::vec3 midpoint = vertTot / (float) sps.size();
 
         // check winding order
-        if (glm::dot(face->normal, centerFace - midpoint) < 0) {
-            face->normal *= -1;
-            face->sps = { pa, pc, pb }; // ensures vertices are ordered to face normal outward.
+        if (glm::dot(face.normal, centerFace - midpoint) < 0) {
+            face.normal *= -1;
+            face.sps = { pa, pc, pb }; // ensures vertices are ordered to face normal outward.
         }
-
-        print(5);
 
         return face;
     }
 
-     void visibleFaces(const SupportPoint* sp, std::vector<Face*>& visible) {
-        for (const auto& face : pq) {
-            // if face is looking away from point, continue
-            if (glm::dot(face->normal, sp->mink) < 0) continue;
-            visible.push_back(face.get());
-        }
-    }
-
-     void horizonEdges(const std::vector<Face*>& visible, std::vector<Edge>& edges) {
-        std::set<Edge> cloud;
-
-        Edge edge;
-        for (Face* face : visible) {
-            for (int i = 0; i < 3; i++) { // loop through each edge of a face
-                face->overrideEdge(i, edge);
-
-                // remove edge if it already appears in cloud
-                auto it = cloud.find({ edge.second, edge.first });
-                if (it != cloud.end()) {
-                    cloud.erase(it);
-                    continue;
-                }
-
-                cloud.insert(edge);
-            }
-        }
-
-        // return as a vector (maybe change to keep set)
-        edges = std::vector<Edge>(cloud.begin(), cloud.end()); 
-    }
-
-    void erase(Face* toErase) { 
+    void erase(const Face& toErase) { 
         auto it = pq.find(toErase); // fast O(log n) lookup using heterogeneous comparator
         if (it != pq.end()) pq.erase(it); // fast O(log n) erase
     }
-    void erase(const std::vector<Face*>& toErase) { 
-        for (Face* face : toErase) erase(face);
+    void erase(const std::vector<Face>& toErase) { 
+        for (const Face& face : toErase) erase(face);
     }
 
     // inserts a new support point into the polytope
@@ -313,18 +297,33 @@ struct Polytope {
 
         // check if point is already in cloud or if it is closer than the face's centroid
         auto it = sps.find(spRef);
-        if (it == sps.end() || glm::length2(sp->mink) < front()->distance) return true;
+        if (it != sps.end() || glm::length2(sp->mink) - front().distance < 1e-6f) return true;
 
-        // discover which faces can "see" the new support point
-        std::vector<Face*> visible; 
-        visibleFaces(sp, visible);
+        Edge edge;
+        std::set<Edge> edges;
 
-        // generate horizon edges
-        std::vector<Edge> edges;
-        horizonEdges(visible, edges);
+        for (auto it = pq.begin(); it != pq.end();) {
+            const Face& face = *it;
 
-        // remove visible faces from polytope
-        erase(visible);
+            if (glm::dot(face.normal, sp->mink) < 0) {
+                ++it;
+                continue;
+            }
+
+            for (int i = 0; i < 3; i++) {
+                face.overrideEdge(i, edge);
+
+                auto edgeIt = edges.find({ edge.second, edge.first });
+                if (edgeIt != edges.end()) {
+                    edges.erase(edgeIt);
+                    continue;
+                }
+                edges.insert(edge);
+            }
+
+            // erase returns the next iterator safely
+            it = pq.erase(it);
+        }
 
         // add new faces from edges
         for (Edge edge : edges) add(buildFace(edge.first, edge.second, &spRef));
@@ -332,33 +331,22 @@ struct Polytope {
         return false;
     }
 
-    Face* front() {
-        if (pq.empty()) return nullptr;
-        return pq.begin()->get();
-    }
+    const Face& front() const { return *pq.begin(); }
 };
 
 bool epa(Rigid* bodyA, Rigid* bodyB, const Simplex& simplex) {
     // generate polytope
     Polytope* polytope = new Polytope(simplex);
 
-    print("polytope built");
-
     bool done = false;
+    int count = 0;
 
     while (!done) {
         SupportPoint sp = getSupportPoint(bodyA, bodyB, vec3(1, 0, 0));
 
-        print("found point");
-
         done = polytope->insert(sp);
-
-        print("iteration complete");
     }
 
-    print("exiting epa");
-
     delete polytope;
-
     return false;
 }

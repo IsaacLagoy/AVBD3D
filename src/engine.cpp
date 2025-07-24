@@ -6,6 +6,7 @@
  */
 
 #include "engine.h"
+#include <cstdio>
 
 // mouse callback commands
 void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
@@ -134,6 +135,13 @@ void Engine::update()
     lastFrame = currentFrame;
 
     camera.processKeyboardInput(window, deltaTime);
+
+    // calculate instantaneous FPS
+    float fps = 1.0f / deltaTime;
+    fps = (int) (fps * 10) / 10;
+    char title[100];
+    snprintf(title, sizeof(title), "Physics Engine Renderer ~ FPS: %.1f", fps);
+    glfwSetWindowTitle(window, title);
 
     // update window
     glfwSwapBuffers(window);
