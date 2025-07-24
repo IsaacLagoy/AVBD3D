@@ -28,3 +28,7 @@ void print(int n) {
 void print(float f) {
     std::cout << f << std::endl;
 }
+
+void print(const vec3& vec) {
+    std::cout << "<" << vec.x << ", " << vec.y << ", " << vec.z << ">" << std::endl;
+}

@@ -77,5 +77,6 @@ void print(std::string str);
 void print(char* str);
 void print(int n);
 void print(float f);
+void print(const vec3& vec);
 
 #endif

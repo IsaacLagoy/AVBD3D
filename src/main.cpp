@@ -18,8 +18,8 @@ int main() {
     // // Create ground plane (large flat box)
     new Rigid(&solver, {5, 0.25f, 5}, 0.0f, 0.5f, {0, -0.25f, 0});
 
-    for (int i = 0; i < 25; ++i) {
-        new Rigid(&solver, vec3(0.5f), 1.0f, 0.5f, vec3(uniform(-2, 2), uniform(1, 3), uniform(-2, 2)), vec3(0), vec3(0), vec4(0, 0, 1, 1));
+    for (int i = 0; i < 2; ++i) {
+        new Rigid(&solver, vec3(0.5f), 1.0f, 0.5f, vec3(uniform(-0.2, 0.2), uniform(1.8, 2.2), uniform(-0.2, 0.2)), vec3(0), vec3(0), vec4(0, 0, 1, 1));
     }
 
     // 2. Create rendering engine and pass bodies
