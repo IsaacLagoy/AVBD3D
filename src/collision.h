@@ -79,11 +79,11 @@ struct Polytope {
 
 // function declarations
 bool handleSimplex(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
-bool simplex0(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
-bool simplex1(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
-bool simplex2(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
-bool simplex3(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
-bool simplex4(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
+bool      simplex0(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
+bool      simplex1(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
+bool      simplex2(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
+bool      simplex3(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
+bool      simplex4(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
 
 bool gjk(Rigid* bodyA, Rigid* bodyB, Simplex& simplex);
 bool epa(Rigid* bodyA, Rigid* bodyB, Polytope* polytope);

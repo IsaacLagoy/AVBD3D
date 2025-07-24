@@ -1,4 +1,5 @@
 #include "collision.h"
+#include <cmath>
 
 // helper functions
 vec3 transform(const vec3& vertex, Rigid* body) {
@@ -23,6 +24,20 @@ SupportPoint getSupportPoint(Rigid* bodyA, Rigid* bodyB, const vec3& dir) {
     return { indexA, indexB, transform(indexA, bodyA) - transform(indexB, bodyB) };
 }
 
+float projectedDistance(const vec3& normal, const vec3& point) {
+    // Assumes `normal` is already normalized
+    return glm::dot(normal, point);
+}
+
+bool sameDirection(const vec3& v1, const vec3& v2) {
+    return glm::dot(v1, v2) > 0;
+}
+
+// debugging
+bool hasNaN(const vec3& v) {
+    return std::isnan(v.x) || std::isnan(v.y) || std::isnan(v.z);
+}
+
 // Main
 int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     // run collision detection
@@ -41,12 +56,13 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
         bodyB->color = vec4(1, 0, 0, 1);
     }
 
-    print((int) polytope->pq.size());
+    if (hasNaN(polytope->front().normal)) std::runtime_error("normal has nan");
 
     // find contact information
-    vec3 penetration = glm::sqrt(polytope->front().normal);
-
+    vec3 penetration = polytope->front().normal * polytope->front().distance;
     print(penetration);
+
+    bodyA->position -= penetration;
 
     delete polytope;
     return collided;
@@ -156,7 +172,7 @@ Polytope::Polytope(const Simplex& simplex) : sps(), pq(), vertTot(0) {
 }
 
 Polytope::~Polytope() {
-    // were using std::unique_ptr so memory is handled
+    // TODO
 }
 
 // add support points and faces to the polytope
@@ -185,19 +201,33 @@ Face Polytope::buildFace(const SupportPoint* pa, const SupportPoint* pb, const S
     const vec3& bv = pb->mink;
     const vec3& cv = pc->mink;
 
+    if (hasNaN(av)) throw std::runtime_error("av has nan");
+    if (hasNaN(bv)) throw std::runtime_error("bv has nan");
+    if (hasNaN(cv)) throw std::runtime_error("cv has nan");
+
     Face face = Face();
 
-    vec3 centerFace = (av + bv + cv) / 3.0f;
-    face.distance = glm::length2(centerFace); // distance can be squared since it is only used for positive comparisons
-    face.normal = glm::cross(av - bv, av - cv);
+    // find normal and distance from plane to origin
+    face.normal = glm::cross(bv - av, cv - av);
+    if (glm::length2(face.normal) < 1e-6f) {
+        print("normal too small");
+        face.normal = vec3(0, 1, 0); // arbitrary fallback
+    } else {
+        face.normal = glm::normalize(face.normal);
+    }
+
+    // signed distance from origin to plane
+    face.distance = projectedDistance(face.normal, av); // assumes plane passes through av
+    
+    // initialize winding order
     face.sps = { pa, pb, pc };
 
     // test if face is coplanar with the origin. if so, use the polytope center instead of origin to determine normal direction
     vec3 midpoint = vec3(0);
-    if (std::abs(glm::dot(face.normal, av)) < 1e-6f) glm::vec3 midpoint = vertTot / (float) sps.size();
+    if (std::abs(glm::dot(face.normal, av)) < 1e-6f) midpoint = vertTot / (float) sps.size();
 
     // check winding order
-    if (glm::dot(face.normal, centerFace - midpoint) < 0) {
+    if (!sameDirection(face.normal, av - midpoint)) {
         face.normal *= -1;
         face.sps = { pa, pc, pb }; // ensures vertices are ordered to face normal outward.
     }
@@ -218,7 +248,7 @@ bool Polytope::insert(const SupportPoint& spRef) {
     
     // check if point is already in cloud or if it is closer than the face's centroid
     auto it = sps.find(spRef);
-    if (it != sps.end() || glm::length2(spRef.mink) - front().distance < 1e-6f) return true;
+    if (it != sps.end() || projectedDistance(front().normal, spRef.mink) - front().distance < 1e-6f) return true;
 
     // insert support point into the sps cloud
     const SupportPoint* sp = add(spRef);
@@ -230,7 +260,7 @@ bool Polytope::insert(const SupportPoint& spRef) {
         const Face& face = *it;
 
         // if face is not facing the new point, continue
-        if (glm::dot(face.normal, sp->mink) < 0) {
+        if (!sameDirection(face.normal, sp->mink - face.sps[0]->mink)) {
             ++it;
             continue;
         }
@@ -243,6 +273,7 @@ bool Polytope::insert(const SupportPoint& spRef) {
             auto edgeIt = edges.find({ edge.second, edge.first });
             if (edgeIt != edges.end()) {
                 edges.erase(edgeIt);
+                print("erased");
                 continue;
             }
             edges.insert(edge);
@@ -253,7 +284,7 @@ bool Polytope::insert(const SupportPoint& spRef) {
     }
 
     // add new faces from edges
-    for (Edge edge : edges) add(buildFace(edge.first, edge.second, &spRef));
+    for (Edge edge : edges) add(buildFace(edge.first, edge.second, sp));
 
     return false;
 }
