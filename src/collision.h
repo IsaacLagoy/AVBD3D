@@ -78,6 +78,9 @@ struct Polytope {
 
 
 // function declarations
+vec3 transform(const vec3& vertex, Rigid* body);
+vec3 transform(int index, Rigid* body);
+
 bool handleSimplex(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
 bool      simplex0(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
 bool      simplex1(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
@@ -87,3 +90,5 @@ bool      simplex4(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
 
 bool gjk(Rigid* bodyA, Rigid* bodyB, Simplex& simplex);
 bool epa(Rigid* bodyA, Rigid* bodyB, Polytope* polytope);
+
+std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB);

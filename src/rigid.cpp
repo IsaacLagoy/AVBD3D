@@ -1,11 +1,17 @@
 #include "solver.h"
 
 Rigid::Rigid(Solver* solver, vec3 size, float density, float friction,
-             vec3 position, vec3 velocity, vec3 angularVelocity, vec4 color)
-    : solver(solver), forces(nullptr), next(nullptr),
-      position(position), rotation(glm::quat(1, 0, 0, 0)),
-      velocity(velocity), prevVelocity(velocity), angularVelocity(angularVelocity),
-      scale(size), friction(friction), color(color)
+             vec3 position, vec6 velocity, vec4 color)
+    :   solver(solver), 
+        forces(nullptr), 
+        next(nullptr),
+        position(position), 
+        rotation(glm::quat(1, 0, 0, 0)),
+        velocity(velocity), 
+        prevVelocity(velocity),
+        scale(size), 
+        friction(friction), 
+        color(color)
 {
     // Add to linked list
     next = solver->bodies;
@@ -30,6 +36,10 @@ bool Rigid::constrainedTo(Rigid* other) const {
         if ((f->bodyA == this && f->bodyB == other) || (f->bodyA == other && f->bodyB == this)) 
             return true;
     return false;
+}
+
+vec6 Rigid::getConfiguration() const {
+    return vec6(position, logMapSO3(rotation));
 }
 
 void Rigid::draw() {}

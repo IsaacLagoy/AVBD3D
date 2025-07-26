@@ -25,6 +25,7 @@ add_executable(render
     src/force.cpp
     src/collision.cpp
     src/mesh.cpp
+    src/contact.cpp
 )
 
 target_include_directories(render PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

@@ -70,31 +70,31 @@ void Solver::step(float dt) {
             }
         }
 
-    // initialize and warmstart bodies (i.e. primal variables)
-    for (Rigid* body = bodies; body != nullptr; body = body->next) {
-        // don't let bodies rotate too fast !!! Fishy 2d code
-        // body->velocity.z = clamp(body->velocity.z, -10.0f, 10.0f);
+    // // initialize and warmstart bodies (i.e. primal variables)
+    // for (Rigid* body = bodies; body != nullptr; body = body->next) {
+    //     // don't let bodies rotate too fast !!! Fishy 2d code
+    //     // body->velocity.z = clamp(body->velocity.z, -10.0f, 10.0f);
 
-        // compute inertial position (Eq 2)
-        body->inertial = body->position + body->velocity * dt;
-        if (body->mass > 0) 
-            body->inertial += vec3(0, gravity, 0) * (dt * dt);
+    //     // compute inertial position (Eq 2)
+    //     body->inertial = body->position + body->velocity.linear * dt;
+    //     if (body->mass > 0) 
+    //         body->inertial += vec3(0, gravity, 0) * (dt * dt);
 
-        // adaptive warmstart (See original VBD paper)
-        vec3 accel = (body->velocity - body->prevVelocity) / dt;
-        float accelExt = accel.y * glm::sign(gravity);
-        float accelWeight = glm::clamp(accelExt / abs(gravity), 0.0f, 1.0f);
-        if (!isfinite(accelWeight)) accelWeight = 0.0f;
+    //     // adaptive warmstart (See original VBD paper)
+    //     vec3 accel = (body->velocity - body->prevVelocity) / dt;
+    //     float accelExt = accel.y * glm::sign(gravity);
+    //     float accelWeight = glm::clamp(accelExt / abs(gravity), 0.0f, 1.0f);
+    //     if (!isfinite(accelWeight)) accelWeight = 0.0f;
 
-        // Save initial position (x-) and compute warmstarted position (See original VBD paper)
-        body->initial = body->position;
-        body->position = body->position + body->velocity * dt + vec3(0, gravity, 0) * (accelWeight * dt * dt);
-    }
+    //     // Save initial position (x-) and compute warmstarted position (See original VBD paper)
+    //     body->initial = body->position;
+    //     body->position = body->position + body->velocity * dt + vec3(0, gravity, 0) * (accelWeight * dt * dt);
+    // }
 
-    // compute velocities (BDF1)
-    for (Rigid* body = bodies; body != nullptr; body = body->next) {
-        body->prevVelocity = body->velocity;
-        if (body->mass > 0)
-            body->velocity = (body->position - body->initial) / dt;
-    }
+    // // compute velocities (BDF1)
+    // for (Rigid* body = bodies; body != nullptr; body = body->next) {
+    //     body->prevVelocity = body->velocity;
+    //     if (body->mass > 0)
+    //         body->velocity = (body->position - body->initial) / dt;
+    // }
 }

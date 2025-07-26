@@ -46,7 +46,6 @@ struct vec6 {
     }
 };
 
-
 template <typename T, size_t N>
 class UnorderedArray {
     std::array<T, N> data;
@@ -71,12 +70,22 @@ class UnorderedArray {
     size_t size() const { return _size; }
 };
 
+// random
 float uniform();
 float uniform(float min, float max);
+
+// printing
 void print(std::string str);
 void print(char* str);
 void print(int n);
 void print(float f);
 void print(const vec3& vec);
+
+// vec6
+float dot(vec6 v1, vec6 v2);
+
+// rotation conversions
+vec3 logMapSO3(quat q);
+quat expMapSO3(vec3 omega);
 
 #endif

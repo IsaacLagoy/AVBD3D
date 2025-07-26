@@ -60,12 +60,20 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
 
     // find contact information
     vec3 penetration = polytope->front().normal * polytope->front().distance;
-    print(penetration);
 
     bodyA->position -= penetration;
 
+    // compute contact information
+    contacts[0].normal = polytope->front().normal;
+    contacts[0].depth = polytope->front().distance;
+
+    std::pair<vec3, vec3> rs = barycentric(polytope, bodyA, bodyB);
+
+    contacts[0].rA = rs.first - bodyA->position;
+    contacts[0].rB = rs.second - bodyB->position;
+
     delete polytope;
-    return collided;
+    return 1;
 }
 
 // GJK
@@ -210,7 +218,6 @@ Face Polytope::buildFace(const SupportPoint* pa, const SupportPoint* pb, const S
     // find normal and distance from plane to origin
     face.normal = glm::cross(bv - av, cv - av);
     if (glm::length2(face.normal) < 1e-6f) {
-        print("normal too small");
         face.normal = vec3(0, 1, 0); // arbitrary fallback
     } else {
         face.normal = glm::normalize(face.normal);
@@ -273,7 +280,6 @@ bool Polytope::insert(const SupportPoint& spRef) {
             auto edgeIt = edges.find({ edge.second, edge.first });
             if (edgeIt != edges.end()) {
                 edges.erase(edgeIt);
-                print("erased");
                 continue;
             }
             edges.insert(edge);

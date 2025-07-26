@@ -25,28 +25,29 @@ struct Rigid {
     Rigid* next = nullptr;
     Mesh* mesh;
 
-    vec3 position;
+    // position and rotation stored seperately since rotation is quaternion
+    vec3 position; 
     quat rotation = quat(1, 0, 0, 0);
 
-    vec3 velocity = vec3(0);
-    vec3 prevVelocity = vec3(0);
-    vec3 angularVelocity = vec3(0);
-
-    vec3 initial;
-    vec3 inertial;
+    vec6 velocity = vec6(0); // linear 3, angular 3
+    vec6 prevVelocity = vec6(0);
+    vec6 initial;
+    vec6 inertial;
 
     vec3 scale;
     float mass;
-    mat3x3 moment;
+    mat3x3 moment; // inertia
     float friction;
     float radius;
 
+    // visual attributes
     vec4 color;
 
     Rigid(Solver* solver, vec3 size, float density, float friction, vec3 position,
-          vec3 velocity = vec3(0), vec3 angularVelocity = vec3(0), vec4 color = vec4(0.8, 0.8, 0.8, 1));
+          vec6 velocity = vec6(), vec4 color = vec4(0.8, 0.8, 0.8, 1));
     ~Rigid();
 
+    vec6 getConfiguration() const;
     bool constrainedTo(Rigid* other) const;
     void draw();
 };
@@ -111,25 +112,27 @@ struct IgnoreCollision : Force {
 };
 
 struct Manifold : Force {
-    // Feature-pair tracking between frames
-    union FeaturePair {
-        struct { char inEdge1, outEdge1, inEdge2, outEdge2;} e;
-        int value;
-    };
 
     struct Contact {
-        FeaturePair feature;
         vec3 rA;
         vec3 rB;
         vec3 normal; // world space contact normal A -> B
-        vec6 JA_n, JB_n; // normal Jacobian rows
-        vec6 JA_t, JB_t; // tangent Jacobian rows
+        float depth;
+        vec3 t1;
+        vec3 t2;
+        vec6 JAn, JBn; // normal Jacobian rows
+        vec6 JAt1, JBt1; // tangent Jacobian rows
+        vec6 JAt2, JBt2; // tangent Jacobian rows in the other direction
         vec3 C0; // accumulated positional error (n, t1, t2)
         bool stick; // static vs dynamic friction
+        float k;
+        vec3 lambda;
     }; 
 
     Contact contacts[4];
     int numContacts;
+
+    // friction variables, later change to mus and mud
     float friction;
 
     Manifold(Solver* solver, Rigid* bodyA, Rigid* bodyB);
