@@ -26,6 +26,8 @@ add_executable(render
     src/collision.cpp
     src/mesh.cpp
     src/contact.cpp
+    src/vec6.cpp
+    src/mat6x6.cpp
 )
 
 target_include_directories(render PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

@@ -48,8 +48,11 @@ struct Rigid {
     ~Rigid();
 
     vec6 getConfiguration() const;
+    void setConfiguration(const vec6& config);
     bool constrainedTo(Rigid* other) const;
     void draw();
+
+    mat6x6 getMassMatrix() const;
 };
 
 // Provides constraint parameters and common interface for all forces.
@@ -63,7 +66,7 @@ struct Force {
     Force* next;
 
     vec6 J[MAX_ROWS]; // Jacobian rows for bodyA (bodyB are -J)
-    mat3x3 H[MAX_ROWS]; // Hassian/approx for complaint constraints
+    mat6x6 H[MAX_ROWS]; // Hassian/approx for complaint constraints
 
     float C[MAX_ROWS]; // Constraint error per row;
     float fmin[MAX_ROWS]; // Lower force/impulse limits

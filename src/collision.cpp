@@ -33,11 +33,6 @@ bool sameDirection(const vec3& v1, const vec3& v2) {
     return glm::dot(v1, v2) > 0;
 }
 
-// debugging
-bool hasNaN(const vec3& v) {
-    return std::isnan(v.x) || std::isnan(v.y) || std::isnan(v.z);
-}
-
 // Main
 int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     // run collision detection
@@ -59,9 +54,9 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     if (hasNaN(polytope->front().normal)) std::runtime_error("normal has nan");
 
     // find contact information
-    vec3 penetration = polytope->front().normal * polytope->front().distance;
+    // vec3 penetration = polytope->front().normal * polytope->front().distance;
 
-    bodyA->position -= penetration;
+    // bodyA->position -= penetration;
 
     // compute contact information
     contacts[0].normal = polytope->front().normal;

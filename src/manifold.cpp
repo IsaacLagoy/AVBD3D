@@ -1,6 +1,7 @@
 #include "solver.h"
 
 Manifold::Manifold(Solver* solver, Rigid* bodyA, Rigid* bodyB) : Force(solver, bodyA, bodyB), numContacts(0) {
+    print("initialized");
     fmax[0] = fmax[2] = 0.0f;
     fmin[0] = fmin[2] = -INFINITY;
 }
@@ -49,34 +50,37 @@ bool Manifold::initialize() {
 }
 
 void Manifold::computeConstraint(float alpha) {
+    // compute positional changes
+    vec6 dA = bodyA->getConfiguration() - bodyA->initial;
+    vec6 dB = bodyB->getConfiguration() - bodyB->initial;
+
     for (int i = 0; i < numContacts; i++) {
-        // Contact& contact = contacts[i];
+        Contact& contact = contacts[i];
 
-        // // compute positional changes
-        // vec3 dpA = bodyA->position - bodyA->initial;
-        // vec3 dpB = bodyB->position - bodyB->initial;
-        // vec3 dwA = vec3(); // bodyA->rotation - bodyA->initialRotation;
-        // vec3 dwB = vec3(); // bodyB->rotation - bodyA->initialRotation;
-
-        // // Taylor Approximation of C(x)
-        // vec6 dA(dpA, dwA);
-        // vec6 dB(dpB, dwB);
+        // Taylor Approximation of C(x)
+        vec3 newC = contact.C0 * (1 - alpha) + vec3(
+            dot(contact.JAn, dA) + dot(contact.JBn, dB), // Cn
+            dot(contact.JAt1, dA) + dot(contact.JBt1, dB), // Ct1
+            dot(contact.JAt2, dA) + dot(contact.JBt2, dB) // Ct2
+        );
         
-        // vec3 newC = contact.C0 * (1 - alpha) + vec3(
-        //     dot(contact.JAn, dA) + dot(contact.JBn, dB), // Cn
-        //     dot(contact.JAt1, dA) + dot(contact.JBt1, dB), // Ct1
-        //     dot(contact.JAt2, dA) + dot(contact.JBt2, dB) // Ct2
-        // );
-        // C[i * 3 + 0] = newC.x;
-        // C[i * 3 + 1] = newC.y;
-        // C[i * 3 + 2] = newC.z;
+        C[i * 3 + 0] = newC.x;
+        C[i * 3 + 1] = newC.y;
+        C[i * 3 + 2] = newC.z;
 
-        // // Update friction bounds
-        // float frictionBound = abs(contact.lambda.x) * friction;
-        // // fmax = vec3(0.0f, frictionBound, frictionBound);
-        // // fmin = vec3(0.0f, -frictionBound, -frictionBound);
+        // Update friction bounds
+        float frictionBound = abs(contact.lambda.x) * friction;
+        vec3 newfmax = vec3(0.0f, frictionBound, frictionBound);
+        vec3 newfmin = vec3(0.0f, -frictionBound, -frictionBound);
 
-        // contact.stick = (abs(contact.lambda.y) < frictionBound && abs(contact.lambda.z) < frictionBound && abs(contact.C0.y) < STICK_THRESH && abs(contact.C0.z) < STICK_THRESH);
+        fmax[i * 3 + 0] = newfmax.x;
+        fmax[i * 3 + 1] = newfmax.y;
+        fmax[i * 3 + 2] = newfmax.z;
+        fmin[i * 3 + 0] = newfmin.x;
+        fmin[i * 3 + 1] = newfmin.y;
+        fmin[i * 3 + 2] = newfmin.z;
+
+        contact.stick = (abs(contact.lambda.y) < frictionBound && abs(contact.lambda.z) < frictionBound && abs(contact.C0.y) < STICK_THRESH && abs(contact.C0.z) < STICK_THRESH);
     }
 }
 

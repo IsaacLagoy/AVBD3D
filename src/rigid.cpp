@@ -42,4 +42,21 @@ vec6 Rigid::getConfiguration() const {
     return vec6(position, logMapSO3(rotation));
 }
 
+void Rigid::setConfiguration(const vec6& config) {
+    position = config.linear;
+    rotation = expMapSO3(config.angular); // TODO ensure this line is correct.
+}
+
 void Rigid::draw() {}
+
+mat6x6 Rigid::getMassMatrix() const {
+    mat3x3 comSkew = skewSymmetricCrossProductMatrix(position);
+    mat3x3 comSkewT = -comSkew;
+
+    mat3x3 topLeft = moment + mass * comSkew * comSkewT;
+    mat3x3 bottomRight = mat3x3(mass, 0, 0, 0, mass, 0, 0, 0, mass);
+    mat3x3 topRight = mass * comSkewT;
+    mat3x3 bottomLeft = mass * comSkew;
+
+    return { topLeft, topRight, bottomLeft, bottomRight };
+}

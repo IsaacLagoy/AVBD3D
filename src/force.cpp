@@ -17,8 +17,10 @@ Force::Force(Solver* solver, Rigid* bodyA, Rigid* bodyB) : solver(solver), bodyA
 
     // set reasonable defaults
     for (int i = 0; i < MAX_ROWS; i++) {
+        print(i);
         J[i] = vec6(0); // 6 DOF
-        H[i] = mat3x3(0);
+        H[i] = mat6x6(); // error here
+        print("Completed 6x6"); // does not print
         C[i] = 0.0f;
         motor[i] = 0.0f;
         stiffness[i] = INFINITY;
@@ -29,6 +31,8 @@ Force::Force(Solver* solver, Rigid* bodyA, Rigid* bodyB) : solver(solver), bodyA
         penalty[i] = 0.0f;
         lambda[i] = 0.0f;
     }
+
+    print("Done initializing");
 }
 
 Force::~Force() {
