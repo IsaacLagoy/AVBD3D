@@ -7,16 +7,22 @@ vec6& vec6::operator=(const vec6& vec) {
     linear = vec.linear;
     angular = vec.angular;
 
-    if (hasNaN(linear)) throw std::runtime_error("Linear component of copy has NaN");
-    if (hasNaN(angular)) throw std::runtime_error("Angular component of copy has NaN");
+    if (hasNaN(linear)) throw std::runtime_error("vec6 = Linear component of copy has NaN");
+    if (hasNaN(angular)) throw std::runtime_error("vec6 = Angular component of copy has NaN");
 
     return *this;
 }
 
 // inplace arithmetic
 vec6& vec6::operator+=(const vec6& rhs) {
+
+    print(linear);
+
     linear += rhs.linear;
     angular += rhs.angular;
+
+    if (hasNaN(linear)) throw std::runtime_error("vec6 += Linear component of copy has NaN");
+    if (hasNaN(angular)) throw std::runtime_error("vec6 += Angular component of copy has NaN");
 
     return *this;
 }
@@ -50,5 +56,6 @@ vec6 vec6::operator*(float rhs) const {
 }
 
 vec6 vec6::operator/(float rhs) const {
+    if (rhs == 0.0f) throw std::runtime_error("Cannot divide by 0.");
     return { linear / rhs, angular / rhs };
 }

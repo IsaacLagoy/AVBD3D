@@ -94,6 +94,9 @@ void Solver::step(float dt) {
 
         // adaptive warmstart (See original VBD paper)
         vec6 accel = (body->velocity - body->prevVelocity) / dt;
+
+        print("Copmuted acceleration");
+
         float accelExt = accel.linear.y * glm::sign(gravity);
         float accelWeight = glm::clamp(accelExt / abs(gravity), 0.0f, 1.0f);
         if (!isfinite(accelWeight)) accelWeight = 0.0f;
@@ -106,7 +109,7 @@ void Solver::step(float dt) {
     if (DEBUG_PRINT) print("Main solver loop");
 
     // main solver loop
-    for (int i = 0; i < iterations; i++) {
+    for (int it = 0; it < iterations; it++) {
         // primal update
         for (Rigid* body = bodies; body != nullptr; body = body->next) {
             // skip static bodies
@@ -116,11 +119,21 @@ void Solver::step(float dt) {
             mat6x6 M = body->getMassMatrix();
             mat6x6 lhs = M / (dt * dt);
             vec6 rhs = lhs * (body->getConfiguration() - body->inertial);
+            print("lhs");
+            print(lhs);
+            print("M");
+            print(M);
+            print("rhs");
+            print(rhs);
+            print(body->getConfiguration());
+            print(body->inertial);
 
             // iterate over all acting on the body
             for (Force* force = body->forces; force != nullptr; force = (force->bodyA == body) ? force->nextA : force->nextB) {
                 // compute constraint and its derivatives
+                if (DEBUG_PRINT) print("Computing constraints");
                 force->computeConstraint(alpha);
+                if (DEBUG_PRINT) print("Computing derivatives");
                 force->computeDerivatives(body);
 
                 for (int i = 0; i < force->rows(); i++) {
@@ -128,15 +141,51 @@ void Solver::step(float dt) {
                     float lambda = isinf(force->stiffness[i]) ? force->lambda[i] : 0.0f;
 
                     // compute the clamped force magnitude (sec 3.2)
+                    print(force->penalty[i]);
+                    print(force->C[i]);
                     float f = glm::clamp(force->penalty[i] * force->C[i] + lambda + force->motor[i], force->fmin[i], force->fmax[i]);
 
                     // compute the diagonally lumped geometric stiffness term (sec 3.5)
-                    mat6x6 G;
+                    mat6x6 G = mat6x6(); // default for now
 
                     // accumulate force (eq. 13) and hessian (eq. 17)
+                    print(force->J[i]);
+                    print(f);
+                    print(force->J[i] * f);
                     rhs += force->J[i] * f;
-                    // TODO do lhs stuff
+                    print("outer");
+                    mat6x6 temp = outer(force->J[i], force->J[i] * force->penalty[i]);
+                    print(temp);
+                    print("temp ^");
+                    lhs += outer(force->J[i], force->J[i] * force->penalty[i]) + G;
+                    print("finished outer");
                 }
+            }
+
+            if (DEBUG_PRINT) print("Solving");
+            // solve the SPD linear system using LDL and apply the update (Eq. 4)
+            body->setConfiguration(body->getConfiguration() - solve(lhs, rhs));
+        }
+
+        // dual update
+        for (Force* force = forces; force != nullptr; force = force->next) {
+            // compute constraint
+            force->computeConstraint(alpha);
+
+            for (int i = 0; i < force->rows(); i++) {
+                // Use lambda as 0 if it's not a hard constraint
+                float lambda = isinf(force->stiffness[i]) ? force->lambda[i] : 0.0f;
+
+                // Update lambda (Eq 11)
+                // Note that we don't include non-conservative forces (ie motors) in the lambda update, as they are not part of the dual problem.
+                force->lambda[i] = glm::clamp(force->penalty[i] * force->C[i] + lambda, force->fmin[i], force->fmax[i]);
+
+                // Disable the force if it has exceeded its fracture threshold
+                if (fabs(force->lambda[i]) >= force->fracture[i]) force->disable();
+
+                // Update the penalty parameter and clamp to material stiffness if we are within the force bounds (Eq. 16)
+                if (force->lambda[i] > force->fmin[i] && force->lambda[i] < force->fmax[i])
+                    force->penalty[i] = glm::min(force->penalty[i] + beta * abs(force->C[i]), glm::min(PENALTY_MIN, force->stiffness[i]));
             }
         }
     }

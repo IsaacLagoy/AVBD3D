@@ -1,7 +1,6 @@
 #include "solver.h"
 
 Manifold::Manifold(Solver* solver, Rigid* bodyA, Rigid* bodyB) : Force(solver, bodyA, bodyB), numContacts(0) {
-    print("initialized");
     fmax[0] = fmax[2] = 0.0f;
     fmin[0] = fmin[2] = -INFINITY;
 }
@@ -22,7 +21,7 @@ bool Manifold::initialize() {
         Contact& contact = contacts[i];
 
         // compute tangent data
-        vec3 linIndep = glm::dot(contact.normal, vec3(0, 1, 0)) > 0.95 ? vec3(1, 0, 0) : vec3(0, 1, 0);
+        vec3 linIndep = fabs(glm::dot(contact.normal, vec3(0, 1, 0))) > 0.95 ? vec3(1, 0, 0) : vec3(0, 1, 0);
         contact.t1 = linIndep - glm::dot(linIndep, contact.normal) * contact.normal;
         contact.t1 = glm::normalize(contact.t1);
         contact.t2 = glm::cross(contact.t1, contact.normal); // guarunteed to be normal
@@ -31,13 +30,21 @@ bool Manifold::initialize() {
         contact.k = 1000.0f;
         contact.lambda = vec3(0.0f);
 
+
+        print("computing Jacobians");
+
         // compute Jacobians
         contact.JAn = vec6(contact.normal, glm::cross(contact.rA, contact.normal));
-        contact.JBn = vec6(-contact.normal, -glm::cross(contact.rB, contact.normal));
+        contact.JBn = vec6(-contact.normal, glm::cross(contact.rB, -contact.normal));
+
+        print("normals done");
+
         contact.JAt1 = vec6(contact.t1, glm::cross(contact.rA, contact.t1));
-        contact.JBt1 = vec6(-contact.t1, -glm::cross(contact.rB, contact.t1));
+        contact.JBt1 = vec6(-contact.t1, glm::cross(contact.rB, -contact.t1));
         contact.JAt2 = vec6(contact.t2, glm::cross(contact.rA, contact.t2));
-        contact.JBt2 = vec6(-contact.t2, -glm::cross(contact.rB, contact.t2));
+        contact.JBt2 = vec6(-contact.t2, glm::cross(contact.rB, -contact.t2));
+
+        print("jacobians computed");
 
         // compute error
         contact.C0 = vec3(-contact.depth, 0, 0);
@@ -57,8 +64,10 @@ void Manifold::computeConstraint(float alpha) {
     for (int i = 0; i < numContacts; i++) {
         Contact& contact = contacts[i];
 
+        print("Computing constraint");
+
         // Taylor Approximation of C(x)
-        vec3 newC = contact.C0 * (1 - alpha) + vec3(
+        vec3 newC = contact.C0 * (1.0f - alpha) + vec3(
             dot(contact.JAn, dA) + dot(contact.JBn, dB), // Cn
             dot(contact.JAt1, dA) + dot(contact.JBt1, dB), // Ct1
             dot(contact.JAt2, dA) + dot(contact.JBt2, dB) // Ct2
@@ -67,6 +76,8 @@ void Manifold::computeConstraint(float alpha) {
         C[i * 3 + 0] = newC.x;
         C[i * 3 + 1] = newC.y;
         C[i * 3 + 2] = newC.z;
+
+        print(newC);
 
         // Update friction bounds
         float frictionBound = abs(contact.lambda.x) * friction;
@@ -88,11 +99,23 @@ void Manifold::computeDerivatives(Rigid* body) {
     // Just store precomputed derivatives in J for the desired body
     for (int i = 0; i < numContacts; i++)
     {
+        Contact& contact = contacts[i];
+
+        // compute constraint jacobian matrix
+        mat3x6 JA(contact.JAt1, contact.JAt2, contact.JAn);
+        mat3x6 JB(contact.JBt1, contact.JBt2, contact.JBn);
+
+        // hessian term: k * J^T * J
+        float k = contact.k;
+        mat6x6 HA = transpose(JA) * JA * k;
+        mat6x6 HB = transpose(JB) * JB * k;
+
         if (body == bodyA)
         {
             J[i * 3 + 0] = contacts[i].JAn;
             J[i * 3 + 1] = contacts[i].JAt1;
             J[i * 3 + 2] = contacts[i].JAt2;
+            
         }
         else
         {
@@ -101,6 +124,8 @@ void Manifold::computeDerivatives(Rigid* body) {
             J[i * 3 + 2] = contacts[i].JBt2;
         }
     }
+
+    print("Finished computing derivatives");
 }
 
 

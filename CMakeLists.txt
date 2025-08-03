@@ -28,6 +28,9 @@ add_executable(render
     src/contact.cpp
     src/vec6.cpp
     src/mat6x6.cpp
+    src/mat3x6.cpp
+    src/mat6x3.cpp
+    src/linear.cpp
 )
 
 target_include_directories(render PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

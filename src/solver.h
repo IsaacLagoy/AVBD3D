@@ -23,7 +23,6 @@ struct Rigid {
     Solver* solver;
     Force* forces = nullptr;
     Rigid* next = nullptr;
-    Mesh* mesh;
 
     // position and rotation stored seperately since rotation is quaternion
     vec3 position; 
@@ -65,8 +64,8 @@ struct Force {
     Force* nextB;
     Force* next;
 
-    vec6 J[MAX_ROWS]; // Jacobian rows for bodyA (bodyB are -J)
-    mat6x6 H[MAX_ROWS]; // Hassian/approx for complaint constraints
+    std::vector<vec6> J; // Jacobian rows for bodyA (bodyB are -J)
+    std::vector<mat6x6> H; // Hassian/approx for complaint constraints
 
     float C[MAX_ROWS]; // Constraint error per row;
     float fmin[MAX_ROWS]; // Lower force/impulse limits
@@ -290,5 +289,8 @@ struct Mesh {
 
 // helper functions
 mat4x4 buildModelMatrix(const Rigid* b);
+
+// linear algebra
+vec6 solve(const mat6x6& lhs, const vec6& rhs);
 
 #endif

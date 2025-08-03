@@ -9,6 +9,8 @@ Rigid::Rigid(Solver* solver, vec3 size, float density, float friction,
         rotation(glm::quat(1, 0, 0, 0)),
         velocity(velocity), 
         prevVelocity(velocity),
+        initial(),
+        inertial(),
         scale(size), 
         friction(friction), 
         color(color)
@@ -18,7 +20,12 @@ Rigid::Rigid(Solver* solver, vec3 size, float density, float friction,
     solver->bodies = this;
 
     mass = scale.x * scale.y * scale.z * density;
-    moment = mat3x3(1); // TODO: replace with actual box inertia
+    if (mass <= 0) throw std::runtime_error("Rigid body mass less than 0");
+    moment = mass / 12.0f * mat3x3(
+        scale.y * scale.y + scale.z * scale.z, 0, 0,
+        0, scale.x * scale.x + scale.z * scale.z, 0,
+        0, 0, scale.x * scale.x + scale.z * scale.z
+    ); 
     radius = glm::length(scale); // max half extent magnitude
 }
 
@@ -43,6 +50,7 @@ vec6 Rigid::getConfiguration() const {
 }
 
 void Rigid::setConfiguration(const vec6& config) {
+    if (hasNaN(config.linear)) throw std::runtime_error("setConfiguration has NaN linear component");
     position = config.linear;
     rotation = expMapSO3(config.angular); // TODO ensure this line is correct.
 }
@@ -51,12 +59,10 @@ void Rigid::draw() {}
 
 mat6x6 Rigid::getMassMatrix() const {
     mat3x3 comSkew = skewSymmetricCrossProductMatrix(position);
-    mat3x3 comSkewT = -comSkew;
-
-    mat3x3 topLeft = moment + mass * comSkew * comSkewT;
-    mat3x3 bottomRight = mat3x3(mass, 0, 0, 0, mass, 0, 0, 0, mass);
-    mat3x3 topRight = mass * comSkewT;
+    mat3x3 topLeft = mass * glm::mat3x3(1.0f);
+    mat3x3 topRight = -mass * comSkew;
     mat3x3 bottomLeft = mass * comSkew;
+    mat3x3 bottomRight = moment - mass * comSkew * comSkew;
 
     return { topLeft, topRight, bottomLeft, bottomRight };
 }
