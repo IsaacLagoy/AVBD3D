@@ -9,17 +9,27 @@ vec3 transform(const vec3& vertex, Rigid* body) {
 
 vec3 transform(int index, Rigid* body) {
     vec3 vertex = Mesh::uniqueVerts[index];
+    if (DEBUG_PRINT_GJK) print("transforming vec3");
+    if (DEBUG_PRINT_GJK) print(transform(vertex, body));
     return transform(vertex, body);
 }
 
 int bestDot(Rigid* body, const vec3& dir) {
     // transform dir to model space
+    if (DEBUG_PRINT_GJK) print("dir best Dot");
+    if (DEBUG_PRINT_GJK) print(dir);
     vec3 inv = glm::inverse(body->rotation) * dir;
+    if (DEBUG_PRINT_GJK) print("inv");
+    if (DEBUG_PRINT_GJK) print(body->rotation);
+    if (DEBUG_PRINT_GJK) print(inv);
     return Mesh::bestDot(inv);
 }
 
 SupportPoint getSupportPoint(Rigid* bodyA, Rigid* bodyB, const vec3& dir) {
+
+    if (DEBUG_PRINT_GJK) print("BestDot A");
     int indexA = bestDot(bodyA, dir);
+    if (DEBUG_PRINT_GJK) print("Best dot B");
     int indexB = bestDot(bodyB, -dir);
     return { indexA, indexB, transform(indexA, bodyA) - transform(indexB, bodyB) };
 }
@@ -39,11 +49,24 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     Simplex simplex = Simplex(); // can prolly go on the stack idk, there's only one rn
     bool collided = gjk(bodyA, bodyB, simplex);
 
+    if (DEBUG_PRINT_GJK) print("position");
+    if (DEBUG_PRINT_GJK) print(bodyA->position);
+    if (DEBUG_PRINT_GJK) print(bodyB->position);
+
     if (!collided) return 0;
 
+    if (DEBUG_PRINT_GJK) print("collided");
+    if (DEBUG_PRINT_GJK) print((int) simplex.size());
+    for (int i = 0; i < 4; i++) if (DEBUG_PRINT_GJK) print(simplex[i].mink);
+
     // run collision resolution
-    Polytope* polytope = new Polytope(simplex);;
+    Polytope* polytope = new Polytope(simplex);
+
+    if (DEBUG_PRINT_GJK) print("created polytope");
+
     epa(bodyA, bodyB, polytope);
+
+    if (DEBUG_PRINT_GJK) print("epa");
         
     // debug coloring
     if (collided) {
@@ -53,10 +76,9 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
 
     if (hasNaN(polytope->front().normal)) std::runtime_error("normal has nan");
 
-    // find contact information
-    // vec3 penetration = polytope->front().normal * polytope->front().distance;
-
-    // bodyA->position -= penetration;
+    if (DEBUG_PRINT_GJK) print("stats");
+    if (DEBUG_PRINT_GJK) print(bodyA->position);
+    if (DEBUG_PRINT_GJK) print(polytope->front().normal);
 
     // compute contact information
     contacts[0].normal = polytope->front().normal;
@@ -75,12 +97,26 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
 bool gjk(Rigid* bodyA, Rigid* bodyB, Simplex& simplex) {
     vec3 dir;
     for (unsigned short i = 0; i < 20; i++) {
+
+        if (DEBUG_PRINT_GJK) print("Iteration");
+        if (DEBUG_PRINT_GJK) print(i);
+        if (DEBUG_PRINT_GJK) print((int) simplex.size());
+        if (DEBUG_PRINT_GJK) print("dir before");
+        if (DEBUG_PRINT_GJK) print(dir);
+
         // defines direction and determins if collision has happened
         bool detected = handleSimplex(simplex, bodyA, bodyB, dir); 
+
+        if (DEBUG_PRINT_GJK) print("dir after");
+        if (DEBUG_PRINT_GJK) print(dir);
+
         // return early if collision is found
         if (detected) return true;
         // add a new point to simplex
         simplex.add(getSupportPoint(bodyA, bodyB, dir));
+
+        if (DEBUG_PRINT_GJK) print("mink point added:");
+        if (DEBUG_PRINT_GJK) print(simplex[simplex.size() - 1].mink);
         // check if that point was discovered past the origin
         if (glm::dot(simplex[simplex.size() - 1].mink, dir) < 0) return false;
     }
@@ -110,9 +146,16 @@ bool simplex1(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir) {
 }
 
 bool simplex2(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir) {
-    vec3 vecBA = simplex[A].mink - simplex[B].mink;
-    vec3 vecBo = -simplex[B].mink;
+    vec3 vecBA = simplex[B].mink - simplex[A].mink;
+    vec3 vecBo = -simplex[A].mink;
     dir = glm::cross(glm::cross(vecBA, vecBo), vecBA);
+
+    // if all points are co-linear, fallback
+    if (glm::length2(dir) < 1e-6f) {
+        vec3 fallback = glm::abs(vecBA.x) < glm::abs(vecBA.z) ? vec3(1, 0, 0) : vec3(0, 0, 1);
+        dir = glm::cross(vecBA, fallback);
+    }
+
     return false;
 }
 
@@ -127,9 +170,10 @@ bool simplex3(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir) {
 
 bool simplex4check(const vec3& normal, const vec3& Do, Index index, Simplex& simplex, vec3& dir) {
     if (glm::dot(normal, Do) > 0) {
-        simplex.remove(index);
         vec3 io = -simplex[index].mink;
+        if (glm::length2(io) < 1e-7) return true;
         dir = (glm::dot(normal, io) > 0) ? normal : -normal;
+        simplex.remove(index);
         return true;
     }
     return false;
@@ -142,9 +186,9 @@ bool simplex4(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir) {
     vec3 DA = simplex[A].mink - simplex[D].mink;
     vec3 Do = -simplex[D].mink;
 
-    vec3 DCB = cross(DC, DB);
-    vec3 DBA = cross(DB, DA);
-    vec3 DAC = cross(DA, DC);
+    vec3 DCB = cross(DB, DC);
+    vec3 DBA = cross(DA, DB);
+    vec3 DAC = cross(DC, DA);
 
     // Triangle faces: ABD, DCA, DBC
     if (simplex4check(DCB, Do, A, simplex, dir)) return false;
@@ -168,10 +212,10 @@ Polytope::Polytope(const Simplex& simplex) : sps(), pq(), vertTot(0) {
     }
 
     // add faces with correct combinations
-    add(buildFace(pts[0], pts[1], pts[2]));
-    add(buildFace(pts[0], pts[1], pts[3]));
-    add(buildFace(pts[0], pts[2], pts[3]));
-    add(buildFace(pts[1], pts[2], pts[3]));
+    add(buildFace(pts[0], pts[1], pts[2])); 
+    add(buildFace(pts[0], pts[1], pts[3])); 
+    add(buildFace(pts[0], pts[2], pts[3])); 
+    add(buildFace(pts[1], pts[2], pts[3])); 
 }
 
 Polytope::~Polytope() {

@@ -1,6 +1,6 @@
 #include "solver.h"
 
-// data types
+#define DEBUG_PRINT_GJK false
 
 // support point
 struct SupportPoint {

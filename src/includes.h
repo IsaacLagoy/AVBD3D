@@ -21,7 +21,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#define DEBUG_PRINT true
+#define DEBUG_PRINT false
 
 // shorthand names
 using vec3 = glm::vec3;
@@ -154,6 +154,7 @@ void print(int n);
 void print(float f);
 void print(const vec3& vec);
 void print(const vec6& vec);
+void print(const quat& quat);
 void print(const mat6x6& mat);
 void print(const mat3x3& mat);
 

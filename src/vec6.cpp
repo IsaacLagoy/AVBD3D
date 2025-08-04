@@ -16,8 +16,6 @@ vec6& vec6::operator=(const vec6& vec) {
 // inplace arithmetic
 vec6& vec6::operator+=(const vec6& rhs) {
 
-    print(linear);
-
     linear += rhs.linear;
     angular += rhs.angular;
 

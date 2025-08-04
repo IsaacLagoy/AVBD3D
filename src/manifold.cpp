@@ -14,6 +14,8 @@ bool Manifold::initialize() {
     // Compute new contacts
     numContacts = collide(bodyA, bodyB, contacts);
 
+    print(numContacts);
+
     // TODO Merge old contact data with new contacts
 
     // initialize contact data
@@ -31,20 +33,20 @@ bool Manifold::initialize() {
         contact.lambda = vec3(0.0f);
 
 
-        print("computing Jacobians");
+        // print("computing Jacobians");
 
         // compute Jacobians
         contact.JAn = vec6(contact.normal, glm::cross(contact.rA, contact.normal));
         contact.JBn = vec6(-contact.normal, glm::cross(contact.rB, -contact.normal));
 
-        print("normals done");
+        // print("normals done");
 
         contact.JAt1 = vec6(contact.t1, glm::cross(contact.rA, contact.t1));
         contact.JBt1 = vec6(-contact.t1, glm::cross(contact.rB, -contact.t1));
         contact.JAt2 = vec6(contact.t2, glm::cross(contact.rA, contact.t2));
         contact.JBt2 = vec6(-contact.t2, glm::cross(contact.rB, -contact.t2));
 
-        print("jacobians computed");
+        // print("jacobians computed");
 
         // compute error
         contact.C0 = vec3(-contact.depth, 0, 0);
@@ -64,7 +66,7 @@ void Manifold::computeConstraint(float alpha) {
     for (int i = 0; i < numContacts; i++) {
         Contact& contact = contacts[i];
 
-        print("Computing constraint");
+        // print("Computing constraint");
 
         // Taylor Approximation of C(x)
         vec3 newC = contact.C0 * (1.0f - alpha) + vec3(
@@ -77,7 +79,7 @@ void Manifold::computeConstraint(float alpha) {
         C[i * 3 + 1] = newC.y;
         C[i * 3 + 2] = newC.z;
 
-        print(newC);
+        // print(newC);
 
         // Update friction bounds
         float frictionBound = abs(contact.lambda.x) * friction;
@@ -125,7 +127,7 @@ void Manifold::computeDerivatives(Rigid* body) {
         }
     }
 
-    print("Finished computing derivatives");
+    // print("Finished computing derivatives");
 }
 
 

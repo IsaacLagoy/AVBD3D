@@ -18,7 +18,7 @@ void Solver::defaultParams()
 {
     dt = 1.0f / 60.0f;
     gravity = -10;
-    iterations = 10;
+    iterations = 1;
 
     // Note: in the paper, beta is suggested to be [1, 1000]. Technically, the best choice will
     // depend on the length, mass, and constraint function scales (ie units) of your simulation,
@@ -95,7 +95,7 @@ void Solver::step(float dt) {
         // adaptive warmstart (See original VBD paper)
         vec6 accel = (body->velocity - body->prevVelocity) / dt;
 
-        print("Copmuted acceleration");
+        // print("Copmuted acceleration");
 
         float accelExt = accel.linear.y * glm::sign(gravity);
         float accelWeight = glm::clamp(accelExt / abs(gravity), 0.0f, 1.0f);
@@ -111,7 +111,9 @@ void Solver::step(float dt) {
     // main solver loop
     for (int it = 0; it < iterations; it++) {
         // primal update
+        int bodyCount = 0;
         for (Rigid* body = bodies; body != nullptr; body = body->next) {
+            bodyCount++;
             // skip static bodies
             if (body->mass <= 0) continue;
 
@@ -119,17 +121,11 @@ void Solver::step(float dt) {
             mat6x6 M = body->getMassMatrix();
             mat6x6 lhs = M / (dt * dt);
             vec6 rhs = lhs * (body->getConfiguration() - body->inertial);
-            print("lhs");
-            print(lhs);
-            print("M");
-            print(M);
-            print("rhs");
-            print(rhs);
-            print(body->getConfiguration());
-            print(body->inertial);
 
             // iterate over all acting on the body
+            int forceCount = 0;
             for (Force* force = body->forces; force != nullptr; force = (force->bodyA == body) ? force->nextA : force->nextB) {
+                forceCount++;
                 // compute constraint and its derivatives
                 if (DEBUG_PRINT) print("Computing constraints");
                 force->computeConstraint(alpha);
@@ -141,31 +137,29 @@ void Solver::step(float dt) {
                     float lambda = isinf(force->stiffness[i]) ? force->lambda[i] : 0.0f;
 
                     // compute the clamped force magnitude (sec 3.2)
-                    print(force->penalty[i]);
-                    print(force->C[i]);
                     float f = glm::clamp(force->penalty[i] * force->C[i] + lambda + force->motor[i], force->fmin[i], force->fmax[i]);
+                    // print(f);
 
                     // compute the diagonally lumped geometric stiffness term (sec 3.5)
                     mat6x6 G = mat6x6(); // default for now
 
                     // accumulate force (eq. 13) and hessian (eq. 17)
-                    print(force->J[i]);
-                    print(f);
-                    print(force->J[i] * f);
                     rhs += force->J[i] * f;
-                    print("outer");
-                    mat6x6 temp = outer(force->J[i], force->J[i] * force->penalty[i]);
-                    print(temp);
-                    print("temp ^");
+                    // print("outer");
                     lhs += outer(force->J[i], force->J[i] * force->penalty[i]) + G;
-                    print("finished outer");
+                    // print("finished outer");
                 }
             }
 
             if (DEBUG_PRINT) print("Solving");
             // solve the SPD linear system using LDL and apply the update (Eq. 4)
+            // print("Force count");
+            // print(forceCount);
+            // if (forceCount == 0) throw std::runtime_error("done!");
             body->setConfiguration(body->getConfiguration() - solve(lhs, rhs));
         }
+        // print("Body Count");
+        // print(bodyCount);
 
         // dual update
         for (Force* force = forces; force != nullptr; force = force->next) {

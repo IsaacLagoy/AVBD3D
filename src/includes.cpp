@@ -39,11 +39,15 @@ void print(float f) {
 }
 
 void print(const vec3& vec) {
-    std::cout << std::setprecision(2) << "<" << vec.x << "\t" << vec.y << "\t" << vec.z << ">" << std::endl;
+    std::cout << "<" << vec.x << "\t" << vec.y << "\t" << vec.z << ">" << std::endl;
+}
+
+void print(const quat& quat) {
+    std::cout << "<" << quat.w << "\t" << quat.x << "\t" << quat.y << "\t" << quat.z << ">" << std::endl;
 }
 
 void print(const vec6& vec) {
-    std::cout << std::setprecision(2) << "<";
+    std::cout << "<";
     for (int i = 0; i < 5; i++) std::cout << vec[i] << "\t";
     std::cout << vec[5] << ">" << std::endl;
 }
@@ -79,7 +83,7 @@ vec3 logMapSO3(quat q) { // ensure q is normalized
 
 quat expMapSO3(vec3 omega) {
     float angle = glm::length(omega);
-    if (angle < 1e-7f) return quat(); // no rotation
+    if (angle < 1e-7f) return quat(1, 0, 0, 0); // no rotation
 
     vec3 axis = omega / angle;
     float halfAngle = 0.5f * angle;
