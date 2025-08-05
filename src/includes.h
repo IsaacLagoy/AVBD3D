@@ -22,6 +22,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 #define DEBUG_PRINT false
+#define DEBUG_LINEAR_PRINT false
 
 // shorthand names
 using vec3 = glm::vec3;

@@ -69,7 +69,7 @@ struct Polytope {
     ~Polytope();
     const SupportPoint* add(const SupportPoint& sp);
     void add(Face face);
-    Face buildFace(const SupportPoint* pa, const SupportPoint* pb, const SupportPoint* pc);
+    std::optional<Face> buildFace(const SupportPoint* pa, const SupportPoint* pb, const SupportPoint* pc);
     void erase(const Face& toErase);
     void erase(const std::vector<Face>& toErase);
     bool insert(const SupportPoint& spRef);

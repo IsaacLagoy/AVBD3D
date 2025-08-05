@@ -212,15 +212,13 @@ Polytope::Polytope(const Simplex& simplex) : sps(), pq(), vertTot(0) {
     }
 
     // add faces with correct combinations
-    add(buildFace(pts[0], pts[1], pts[2])); 
-    add(buildFace(pts[0], pts[1], pts[3])); 
-    add(buildFace(pts[0], pts[2], pts[3])); 
-    add(buildFace(pts[1], pts[2], pts[3])); 
+    add(buildFace(pts[0], pts[1], pts[2]).value()); 
+    add(buildFace(pts[0], pts[1], pts[3]).value()); 
+    add(buildFace(pts[0], pts[2], pts[3]).value()); 
+    add(buildFace(pts[1], pts[2], pts[3]).value()); 
 }
 
-Polytope::~Polytope() {
-    // TODO
-}
+Polytope::~Polytope() {}
 
 // add support points and faces to the polytope
 const SupportPoint* Polytope::add(const SupportPoint& sp) {
@@ -243,7 +241,7 @@ const SupportPoint* Polytope::add(const SupportPoint& sp) {
 void Polytope::add(Face face) { pq.insert(face); }
 
 // create new faces using existing points
-Face Polytope::buildFace(const SupportPoint* pa, const SupportPoint* pb, const SupportPoint* pc) {
+std::optional<Face> Polytope::buildFace(const SupportPoint* pa, const SupportPoint* pb, const SupportPoint* pc) {
     const vec3& av = pa->mink;
     const vec3& bv = pb->mink;
     const vec3& cv = pc->mink;
@@ -256,8 +254,8 @@ Face Polytope::buildFace(const SupportPoint* pa, const SupportPoint* pb, const S
 
     // find normal and distance from plane to origin
     face.normal = glm::cross(bv - av, cv - av);
-    if (glm::length2(face.normal) < 1e-6f) {
-        face.normal = vec3(0, 1, 0); // arbitrary fallback
+    if (glm::length2(face.normal) < 1e-8f) {
+        return std::nullopt; // face is degenerate
     } else {
         face.normal = glm::normalize(face.normal);
     }
@@ -329,7 +327,11 @@ bool Polytope::insert(const SupportPoint& spRef) {
     }
 
     // add new faces from edges
-    for (Edge edge : edges) add(buildFace(edge.first, edge.second, sp));
+    for (Edge edge : edges) {
+        std::optional<Face> faceOpt = buildFace(edge.first, edge.second, sp);
+        if (!faceOpt.has_value()) continue; // skip degenerate face
+        add(faceOpt.value());
+    }
 
     return false;
 }

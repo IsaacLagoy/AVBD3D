@@ -21,6 +21,8 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
 
     float denom = d00 * d11 - d01 * d01;
 
+    if (fabs(denom) == 0) throw std::runtime_error("EPA output a colinear face");
+
     float v = (d11 * d20 - d01 * d21) / denom;
     float w = (d00 * d21 - d01 * d20) / denom;
     float u = 1 - v - w;

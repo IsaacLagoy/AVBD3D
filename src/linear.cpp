@@ -4,9 +4,9 @@ vec6 solve(const mat6x6& lhs, const vec6& rhs) {
     mat6x6 L = mat6x6();
     vec6 D = vec6();
 
-    // print("lhs");
-    // print("rhs");
-    // print(rhs);
+    if (DEBUG_LINEAR_PRINT) print("lhs");
+    if (DEBUG_LINEAR_PRINT) print("rhs");
+    if (DEBUG_LINEAR_PRINT) print(rhs);
 
 
     // compute LDL^T decomposition
@@ -26,11 +26,11 @@ vec6 solve(const mat6x6& lhs, const vec6& rhs) {
         }
     }
 
-    // print("L");
-    // print(L);
+    if (DEBUG_LINEAR_PRINT) print("L");
+    if (DEBUG_LINEAR_PRINT) print(L);
 
-    // print("D");
-    // print(D);
+    if (DEBUG_LINEAR_PRINT) print("D");
+    if (DEBUG_LINEAR_PRINT) print(D);
 
     // forward substitution: solve Ly = b
     vec6 y = vec6();
@@ -40,15 +40,15 @@ vec6 solve(const mat6x6& lhs, const vec6& rhs) {
         y[i] = rhs[i] - sum;
     }
 
-    // print("y");
-    // print(y);
+    if (DEBUG_LINEAR_PRINT) print("y");
+    if (DEBUG_LINEAR_PRINT) print(y);
 
     // diagonal solve: solve Dz = y
     vec6 z = vec6();
     for (int i = 0; i < 6; i++) z[i] = y[i] / D[i];
 
-    // print("z");
-    // print(z);
+    if (DEBUG_LINEAR_PRINT) print("z");
+    if (DEBUG_LINEAR_PRINT) print(z);
 
     // backward substitution: solve L^T x = z
     vec6 x = vec6();
@@ -58,8 +58,8 @@ vec6 solve(const mat6x6& lhs, const vec6& rhs) {
         x[i] = z[i] - sum;
     }
 
-    // print("x");
-    // print(x);
+    if (DEBUG_LINEAR_PRINT) print("x");
+    if (DEBUG_LINEAR_PRINT) print(x);
 
     return x;
 }

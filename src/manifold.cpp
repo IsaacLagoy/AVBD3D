@@ -6,6 +6,8 @@ Manifold::Manifold(Solver* solver, Rigid* bodyA, Rigid* bodyB) : Force(solver, b
 }
 
 bool Manifold::initialize() {
+    print("Initializing");
+
     // compute friction
     friction = sqrtf(bodyA->friction * bodyB->friction);
 
@@ -14,9 +16,9 @@ bool Manifold::initialize() {
     // Compute new contacts
     numContacts = collide(bodyA, bodyB, contacts);
 
-    print(numContacts);
-
     // TODO Merge old contact data with new contacts
+
+    print("Done colliding");
 
     // initialize contact data
     for (int i = 0; i < numContacts; i++) {
@@ -32,21 +34,25 @@ bool Manifold::initialize() {
         contact.k = 1000.0f;
         contact.lambda = vec3(0.0f);
 
-
-        // print("computing Jacobians");
+        print("computing Jacobians");
+        print(contact.rA);
+        print(contact.rB);
+        print(contact.t1);
+        print(contact.t2);
+        print(contact.normal);
 
         // compute Jacobians
         contact.JAn = vec6(contact.normal, glm::cross(contact.rA, contact.normal));
         contact.JBn = vec6(-contact.normal, glm::cross(contact.rB, -contact.normal));
 
-        // print("normals done");
+        print("normals done");
 
         contact.JAt1 = vec6(contact.t1, glm::cross(contact.rA, contact.t1));
         contact.JBt1 = vec6(-contact.t1, glm::cross(contact.rB, -contact.t1));
         contact.JAt2 = vec6(contact.t2, glm::cross(contact.rA, contact.t2));
         contact.JBt2 = vec6(-contact.t2, glm::cross(contact.rB, -contact.t2));
 
-        // print("jacobians computed");
+        print("jacobians computed");
 
         // compute error
         contact.C0 = vec3(-contact.depth, 0, 0);
@@ -54,6 +60,8 @@ bool Manifold::initialize() {
         // friction variables
         contact.stick = true;
     }
+
+    print("Initializing complete");
 
     return numContacts > 0;
 }

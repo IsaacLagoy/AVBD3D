@@ -39,7 +39,7 @@ void Solver::defaultParams()
 
 void Solver::step(float dt) {
 
-    if (dt < 1e-5f) dt = 1e-5f;
+    if (dt < 1e-5f) dt = 1e-5f; // TODO remove this, maybe causing division by 0 errors. 
 
     if (DEBUG_PRINT) print("Starting Solver Step");
 
@@ -157,6 +157,8 @@ void Solver::step(float dt) {
             // print(forceCount);
             // if (forceCount == 0) throw std::runtime_error("done!");
             body->setConfiguration(body->getConfiguration() - solve(lhs, rhs));
+
+            if (DEBUG_PRINT) print("Solved");
         }
         // print("Body Count");
         // print(bodyCount);
