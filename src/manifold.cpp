@@ -3,15 +3,10 @@
 Manifold::Manifold(Solver* solver, Rigid* bodyA, Rigid* bodyB) 
     : Force(solver, bodyA, bodyB), numContacts(0) 
 {
-    // fmax[0] = fmax[2] = 0.0f;
-    // fmin[0] = fmin[2] = -INFINITY;
-
-    
-
     // The constructor is minimal, all work is done in initialize
     for (int i = 0; i < 4; ++i) {
         contacts[i].C0_n = 0.0f;
-        contacts[i].C0_t = vec3{0, 0, 0};
+        contacts[i].C0_t = vec3(0);
     }
 }
 
@@ -101,6 +96,8 @@ void Manifold::computeConstraint(float alpha) {
         // If normal points from B to A, then dot(pA - pB, normal) is positive when separated
         float separation = glm::dot(pA - pB, contact.normal);
 
+        // print(separation);
+
         // When C < 0, objects are too close (violating constraint)
         // When C >= 0, objects are properly separated (satisfying constraint)
         C[i * 3 + 0] = separation;
@@ -160,8 +157,8 @@ void Manifold::computeDerivatives(Rigid* body) {
         const vec3& r = isA ? contact.rA : contact.rB;
 
         J[i * 3 + 0] = vec6(contact.normal * sign, glm::cross(r, contact.normal) * sign);
-        J[i * 3 + 1] = vec6(contact.t1 * sign, glm::cross(r, contact.t1) * sign);
-        J[i * 3 + 2] = vec6(contact.t2 * sign, glm::cross(r, contact.t2) * sign);
+        J[i * 3 + 1] = vec6(contact.t1     * sign, glm::cross(r, contact.t1)     * sign);
+        J[i * 3 + 2] = vec6(contact.t2     * sign, glm::cross(r, contact.t2)     * sign);
 
         // // compute constraint jacobian matrix
         // mat3x6 JA(contact.JAt1, contact.JAt2, contact.JAn);

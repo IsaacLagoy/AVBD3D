@@ -10,7 +10,7 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
 
     vec3 v0 = sp1.mink - sp0.mink;
     vec3 v1 = sp2.mink - sp0.mink;
-    vec3 v2 = -sp0.mink;
+    vec3 v2 = -sp0.mink; // origin - sp0
 
     // compute barycentric coordinates for projection
     float d00 = glm::dot(v0, v0);
@@ -25,7 +25,7 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
 
     float v = (d11 * d20 - d01 * d21) / denom;
     float w = (d00 * d21 - d01 * d20) / denom;
-    float u = 1 - v - w;
+    float u = 1.0f - v - w;
 
     vec3 barycentric = glm::clamp(vec3(u, v, w), 0.0f, 1.0f);
 

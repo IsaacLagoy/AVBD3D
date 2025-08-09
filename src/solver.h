@@ -150,7 +150,6 @@ struct Manifold : Force {
 };
 
 struct Solver {
-    float dt;
     vec3 gravity;
     int iterations;
 

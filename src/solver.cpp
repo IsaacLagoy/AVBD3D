@@ -16,7 +16,6 @@ void Solver::clear() {
 
 void Solver::defaultParams()
 {
-    dt = 1.0f / 60.0f;
     gravity = vec3(0, -10.0f, 0);
     iterations = 10;
 
@@ -29,7 +28,7 @@ void Solver::defaultParams()
     // Alpha controls how much stabilization is applied. Higher values give slower and smoother
     // error correction, and lower values are more responsive and energetic. Tune this depending
     // on your desired constraint error response.
-    alpha = 0.99f;
+    alpha = 0.95f;
 
     // Gamma controls how much the penalty and lambda values are decayed each step during warmstarting.
     // This should always be < 1 so that the penalty values can decrease (unless you use a different
@@ -85,7 +84,7 @@ void Solver::step(float dt) {
 
         if (body->mass > 0) {
             // compute inertia state
-            body->inertial.linear += gravity * (dt * dt);
+            body->inertial.linear = body->position + body->velocity.linear * dt + gravity * (dt * dt);
             quat w_q(body->velocity.angular.x, body->velocity.angular.y, body->velocity.angular.z, 0);
             body->inertial.angular = logMapSO3(normalize(body->rotation + (w_q * body->rotation) * (dt * 0.5f)));
 
@@ -101,21 +100,6 @@ void Solver::step(float dt) {
         } else {
             body->inertial = body->getConfiguration();
         }
-
-        // compute inertial position (Eq 2)
-        // body->inertial = body->getConfiguration() + body->velocity * dt;
-        // if (body->mass > 0) 
-        //     body->inertial.linear += vec3(0, gravity, 0) * (dt * dt);
-
-        // // adaptive warmstart (See original VBD paper)
-        // vec6 accel = (body->velocity - body->prevVelocity) / dt;
-        // float accelExt = accel.linear.y * glm::sign(gravity);
-        // float accelWeight = glm::clamp(accelExt / abs(gravity), 0.0f, 1.0f);
-        // if (!isfinite(accelWeight)) accelWeight = 0.0f;
-
-        // // Save initial position (x-) and compute warmstarted position (See original VBD paper)
-        // body->initial = body->getConfiguration();
-        // body->setConfiguration(body->getConfiguration() + body->velocity * dt + vec6(0, gravity, 0, 0, 0, 0) * (accelWeight * dt * dt));
     }
 
     if (DEBUG_PRINT) print("Main Loop");
@@ -150,7 +134,6 @@ void Solver::step(float dt) {
 
                     mat3x3 G = glm::diagonal3x3(glm::abs(glm::cross(force->J[i].angular, body->getInvInertiaTensor() * force->J[i].angular)) * f);
 
-                    // print("outer");
                     lhs += outer(force->J[i], force->J[i] * force->penalty[i]);
                     lhs.addBottomRight(G);
                 }
@@ -158,7 +141,7 @@ void Solver::step(float dt) {
 
             // solve the SPD linear system using LDL and apply the update (Eq. 4)
             body->setConfiguration(body->getConfiguration() - solve(lhs, rhs));
-
+            // print(solve(lhs, rhs));
         }
 
         // dual update
@@ -189,6 +172,10 @@ void Solver::step(float dt) {
     // compute velocities (BDF1)
     for (Rigid* body = bodies; body != nullptr; body = body->next) {
         body->prevVelocity = body->velocity;
-        if (body->mass > 0) body->velocity = (body->getConfiguration() - body->initial) / dt;
+        if (body->mass > 0) {
+            body->velocity = (body->getConfiguration() - body->initial) / dt;
+            // print("velocity");
+            // print(body->velocity);
+        }
     }
 }
