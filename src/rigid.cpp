@@ -20,12 +20,21 @@ Rigid::Rigid(Solver* solver, vec3 size, float density, float friction,
     solver->bodies = this;
 
     mass = scale.x * scale.y * scale.z * density;
-    if (mass <= 0) throw std::runtime_error("Rigid body mass less than 0");
-    moment = mass / 12.0f * mat3x3(
-        scale.y * scale.y + scale.z * scale.z, 0, 0,
-        0, scale.x * scale.x + scale.z * scale.z, 0,
-        0, 0, scale.x * scale.x + scale.z * scale.z
-    ); 
+    float invMass = 1.0f / mass;
+
+    if (mass > 0) {
+        float Ixx = (1.0f / 12.0f) * mass * (size.y * size.y + size.z * size.z);
+        float Iyy = (1.0f / 12.0f) * mass * (size.x * size.x + size.z * size.z);
+        float Izz = (1.0f / 12.0f) * mass * (size.x * size.x + size.y * size.y);
+
+        invInertiaTensor = mat3x3(
+            {1.0f / Ixx, 0, 0},
+            {0, 1.0f / Iyy, 0},
+            {0, 0, 1.0f / Izz}
+        );
+    } else {
+        
+    }
     radius = glm::length(scale); // max half extent magnitude
 }
 
@@ -58,11 +67,16 @@ void Rigid::setConfiguration(const vec6& config) {
 void Rigid::draw() {}
 
 mat6x6 Rigid::getMassMatrix() const {
-    mat3x3 comSkew = skewSymmetricCrossProductMatrix(position);
+    // mat3x3 comSkew = skewSymmetricCrossProductMatrix(position);
     mat3x3 topLeft = mass * glm::mat3x3(1.0f);
-    mat3x3 topRight = -mass * comSkew;
-    mat3x3 bottomLeft = mass * comSkew;
-    mat3x3 bottomRight = moment - mass * comSkew * comSkew;
+    // mat3x3 topRight = -mass * comSkew;
+    // mat3x3 bottomLeft = mass * comSkew;
+    mat3x3 bottomRight = getInvInertiaTensor();
 
-    return { topLeft, topRight, bottomLeft, bottomRight };
+    return { topLeft, mat3x3(), mat3x3(), bottomRight };
+}
+
+mat3x3 Rigid::getInvInertiaTensor() const {
+    mat3x3 R(rotation);
+    return R * invInertiaTensor * glm::transpose(R);
 }

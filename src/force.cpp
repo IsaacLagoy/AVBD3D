@@ -23,9 +23,10 @@ Force::Force(Solver* solver, Rigid* bodyA, Rigid* bodyB) : solver(solver), bodyA
     for (int i = 0; i < MAX_ROWS; i++) {
         J[i] = vec6(0); // 6 DOF
         H[i] = mat6x6(); // error here
+
         C[i] = 0.0f;
         motor[i] = 0.0f;
-        stiffness[i] = INFINITY;
+        stiffness[i] = 0.0f; // default to soft
         fmax[i] = INFINITY;
         fmin[i] = -INFINITY;
         fracture[i] = INFINITY;

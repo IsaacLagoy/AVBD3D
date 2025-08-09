@@ -8,8 +8,8 @@
 #define MAX_ROWS 12           // Max scalar rows an individual constraint can have (3D contact = 3n)
 #define PENALTY_MIN 1000.0f   // Minimum penalty parameter
 #define PENALTY_MAX 1e9f      // Maximum penalty parameter
-#define COLLISION_MARGIN 0.01f
-#define STICK_THRESH 0.01f
+#define COLLISION_MARGIN 0.02f
+#define STICK_THRESH 0.02f
 #define SHOW_CONTACTS true
 
 struct Rigid;
@@ -21,8 +21,8 @@ struct Mesh;
 // contains data for a single rigid body
 struct Rigid {
     Solver* solver;
-    Force* forces = nullptr;
-    Rigid* next = nullptr;
+    Force* forces;
+    Rigid* next;
 
     // position and rotation stored seperately since rotation is quaternion
     vec3 position; 
@@ -35,7 +35,7 @@ struct Rigid {
 
     vec3 scale;
     float mass;
-    mat3x3 moment; // inertia
+    mat3x3 invInertiaTensor;
     float friction;
     float radius;
 
@@ -51,6 +51,7 @@ struct Rigid {
     bool constrainedTo(Rigid* other) const;
     void draw();
 
+    mat3x3 getInvInertiaTensor() const;
     mat6x6 getMassMatrix() const;
 };
 
@@ -119,16 +120,16 @@ struct Manifold : Force {
         vec3 rA;
         vec3 rB;
         vec3 normal; // world space contact normal A -> B
-        float depth;
+        float depth; 
         vec3 t1;
         vec3 t2;
         vec6 JAn, JBn; // normal Jacobian rows
         vec6 JAt1, JBt1; // tangent Jacobian rows
         vec6 JAt2, JBt2; // tangent Jacobian rows in the other direction
         vec3 C0; // accumulated positional error (n, t1, t2)
+        float C0_n;
+        vec3 C0_t;
         bool stick; // static vs dynamic friction
-        float k;
-        vec3 lambda;
     }; 
 
     Contact contacts[4];
@@ -150,7 +151,7 @@ struct Manifold : Force {
 
 struct Solver {
     float dt;
-    float gravity;
+    vec3 gravity;
     int iterations;
 
     float alpha; 

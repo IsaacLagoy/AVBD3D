@@ -11,22 +11,21 @@
 int main() {
     // 1. Create a few Rigid cuboids
     Solver solver;
-    solver.gravity = -0.1f;
+    solver.gravity = vec3(0, -0.1f, 0);
     solver.dt = 1.0f / 60.0f;
-    solver.iterations = 1;
+    solver.iterations = 10;
 
     vec3 offset = vec3(uniform(-2, 2), uniform(-2, 2),uniform(-2, 2));
 
     // Create ground plane (large flat box)
-    // new Rigid(&solver, {5, 0.25f, 5}, 1.0f, 0.5f, {0, -0.25f, 0});
+    new Rigid(&solver, {5, 0.25f, 5}, -1.0f, 0.5f, {0, -1.0f, 0});
 
-    for (int i = 0; i < 2; ++i) {
-        new Rigid(&solver, vec3(0.5f), 1.0f, 0.4f, vec3(uniform(-0.2f, 0.2f), uniform(1.5f, 2.0f), uniform(-0.2f, 0.2f)), vec6(), vec4(0, 0, 1, 1));
+    for (int i = 0; i < 20; ++i) {
+        new Rigid(&solver, vec3(0.5f), 1.0f, 0.4f, vec3(uniform(-0.2f, 0.2f), uniform(1.5f, 2.0f), uniform(-0.2f, 0.2f)), vec6());
     }
 
-    // new Rigid(&solver, vec3(0.5f), 1.0f, 0.4f, vec3(1.5, 1, 1.5), vec6(), vec4(0, 0, 1, 1));
-    // new Rigid(&solver, vec3(0.5f), 1.0f, 0.4f, vec3(1.25, 1, 1.25), vec6(), vec4(0, 0, 1, 1));
-    
+    // new Rigid(&solver, vec3(0.5f), 1.0f, 0.4f, vec3(1.5, 1, 1.5), vec6());
+    // new Rigid(&solver, vec3(0.5f), 1.0f, 0.4f, vec3(1.25, 1, 1.25), vec6());
 
     // 2. Create rendering engine and pass bodies
     Engine engine(800, 600, "AVBD Cuboids", "shaders/vertex.glsl", "shaders/fragment.glsl", solver.bodies);

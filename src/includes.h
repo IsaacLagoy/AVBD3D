@@ -88,6 +88,7 @@ struct mat6x6 {
     vec6 operator*(const vec6& rhs) const;
 
     mat6x6 operator/(float rhs) const;
+    void addBottomRight(const mat3x3& mat);
 };
 
 struct mat3x6 {

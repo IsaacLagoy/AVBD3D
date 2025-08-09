@@ -67,12 +67,6 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     epa(bodyA, bodyB, polytope);
 
     if (DEBUG_PRINT_GJK) print("epa");
-        
-    // debug coloring
-    if (collided) {
-        bodyA->color = vec4(1, 0, 0, 1);
-        bodyB->color = vec4(1, 0, 0, 1);
-    }
 
     if (hasNaN(polytope->front().normal)) std::runtime_error("normal has nan");
 
@@ -137,6 +131,7 @@ bool handleSimplex(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir) {
 
 bool simplex0(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir) {
     dir = bodyB->position - bodyA->position;
+    if (glm::length2(dir) < 1e-6f) dir = vec3(0, 1, 0);
     return false;
 }
 
@@ -242,6 +237,7 @@ void Polytope::add(Face face) { pq.insert(face); }
 
 // create new faces using existing points
 std::optional<Face> Polytope::buildFace(const SupportPoint* pa, const SupportPoint* pb, const SupportPoint* pc) {
+
     const vec3& av = pa->mink;
     const vec3& bv = pb->mink;
     const vec3& cv = pc->mink;

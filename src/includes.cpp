@@ -76,8 +76,6 @@ vec3 logMapSO3(quat q) { // ensure q is normalized
     if (sinHalfAngle < 1e-7f || glm::length2(axis) < 1e-7f) return vec3(0); // no rotation
     axis = glm::normalize(axis);
 
-    print(axis * angle);
-
     return axis * angle;
 }
 

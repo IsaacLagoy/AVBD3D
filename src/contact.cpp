@@ -33,6 +33,5 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
     vec3 PA = u * transform(sp0.indexA, bodyA) + v * transform(sp1.indexA, bodyA) + w * transform(sp2.indexA, bodyA);
     vec3 PB = u * transform(sp0.indexB, bodyB) + v * transform(sp1.indexB, bodyB) + w * transform(sp2.indexB, bodyB);
 
-    // find midpoint
     return { PA, PB };
 }
