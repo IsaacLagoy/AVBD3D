@@ -33,7 +33,7 @@ Rigid::Rigid(Solver* solver, vec3 size, float density, float friction,
             {0, 0, 1.0f / Izz}
         );
     } else {
-        
+        invInertiaTensor = mat3x3({0,0,0}, {0,0,0}, {0,0,0});
     }
     radius = glm::length(scale); // max half extent magnitude
 }
@@ -67,11 +67,8 @@ void Rigid::setConfiguration(const vec6& config) {
 void Rigid::draw() {}
 
 mat6x6 Rigid::getMassMatrix() const {
-    // mat3x3 comSkew = skewSymmetricCrossProductMatrix(position);
     mat3x3 topLeft = mass * glm::mat3x3(1.0f);
-    // mat3x3 topRight = -mass * comSkew;
-    // mat3x3 bottomLeft = mass * comSkew;
-    mat3x3 bottomRight = getInvInertiaTensor();
+    mat3x3 bottomRight = glm::transpose(getInvInertiaTensor());
 
     return { topLeft, mat3x3(), mat3x3(), bottomRight };
 }

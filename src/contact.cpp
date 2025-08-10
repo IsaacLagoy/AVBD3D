@@ -38,8 +38,8 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
     float alpha = 1.0f - beta - gamma;
 
     // interpolate points and bodyA and bodyB
-    vec3 PA = alpha * transform(sp0.indexA, bodyA) + beta * transform(sp1.indexA, bodyA) + gamma * transform(sp2.indexA, bodyA);
-    vec3 PB = alpha * transform(sp0.indexB, bodyB) + beta * transform(sp1.indexB, bodyB) + gamma * transform(sp2.indexB, bodyB);
+    vec3 PA = alpha * Mesh::uniqueVerts[sp0.indexA] + beta * Mesh::uniqueVerts[sp1.indexA] + gamma * Mesh::uniqueVerts[sp2.indexA];
+    vec3 PB = alpha * Mesh::uniqueVerts[sp0.indexB] + beta * Mesh::uniqueVerts[sp1.indexB] + gamma *Mesh::uniqueVerts[sp2.indexB];
 
     return { PA, PB };
 }

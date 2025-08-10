@@ -132,7 +132,7 @@ void Solver::step(float dt) {
                     // accumulate force (eq. 13) and hessian (eq. 17)
                     rhs += force->J[i] * f;
 
-                    mat3x3 G = glm::diagonal3x3(glm::abs(glm::cross(force->J[i].angular, body->getInvInertiaTensor() * force->J[i].angular)) * f);
+                    mat3x3 G = glm::diagonal3x3(glm::abs(glm::cross(force->J[i].angular, glm::transpose(body->getInvInertiaTensor()) * force->J[i].angular)) * f);
 
                     lhs += outer(force->J[i], force->J[i] * force->penalty[i]);
                     lhs.addBottomRight(G);
@@ -162,7 +162,7 @@ void Solver::step(float dt) {
 
                 // Update the penalty parameter and clamp to material stiffness if we are within the force bounds (Eq. 16)
                 if (force->lambda[i] > force->fmin[i] && force->lambda[i] < force->fmax[i])
-                    force->penalty[i] = glm::min(force->penalty[i] + beta * abs(force->C[i]), glm::min(PENALTY_MIN, force->stiffness[i]));
+                    force->penalty[i] = glm::min(force->penalty[i] + beta * abs(force->C[i]), PENALTY_MAX);
             }
         }
     }
@@ -174,8 +174,8 @@ void Solver::step(float dt) {
         body->prevVelocity = body->velocity;
         if (body->mass > 0) {
             body->velocity = (body->getConfiguration() - body->initial) / dt;
-            // print("velocity");
-            // print(body->velocity);
+            print("velocity");
+            print(body->velocity);
         }
     }
 }

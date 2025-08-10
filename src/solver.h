@@ -289,6 +289,11 @@ struct Mesh {
 
 // helper functions
 mat4x4 buildModelMatrix(const Rigid* b);
+vec3 transform(const vec3& vertex, Rigid* body);
+vec3 transform(int index, Rigid* body);
+
+vec3 rotate(const vec3& vertex, Rigid* body);
+vec3 rotate(int index, Rigid* body);
 
 // linear algebra
 vec6 solve(const mat6x6& lhs, const vec6& rhs);

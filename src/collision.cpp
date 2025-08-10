@@ -9,9 +9,16 @@ vec3 transform(const vec3& vertex, Rigid* body) {
 
 vec3 transform(int index, Rigid* body) {
     vec3 vertex = Mesh::uniqueVerts[index];
-    if (DEBUG_PRINT_GJK) print("transforming vec3");
-    if (DEBUG_PRINT_GJK) print(transform(vertex, body));
     return transform(vertex, body);
+}
+
+vec3 rotate(const vec3& vertex, Rigid* body) {
+    return body->rotation * vertex;
+}
+
+vec3 rotate(int index, Rigid* body) {
+    vec3 vertex = Mesh::uniqueVerts[index];
+    return rotate(vertex, body);
 }
 
 int bestDot(Rigid* body, const vec3& dir) {
@@ -80,8 +87,8 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
 
     std::pair<vec3, vec3> rs = barycentric(polytope, bodyA, bodyB);
 
-    contacts[0].rA = rs.first - bodyA->position;
-    contacts[0].rB = rs.second - bodyB->position;
+    contacts[0].rA = rs.first;
+    contacts[0].rB = rs.second;
 
     delete polytope;
     return 1;

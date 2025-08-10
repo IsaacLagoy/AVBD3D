@@ -19,10 +19,9 @@ bool Manifold::initialize() {
 
     // Compute new contacts
     numContacts = collide(bodyA, bodyB, contacts);
-
     if (numContacts == 0) return false;
 
-        // Set stiffness to FLT_MAX for hard constraints (normal and friction)
+    // Set stiffness to FLT_MAX for hard constraints (normal and friction)
     for (int i = 0; i < rows(); ++i) {
         stiffness[i] = INFINITY;
     }
@@ -33,22 +32,25 @@ bool Manifold::initialize() {
     for (int i = 0; i < numContacts; i++) {
         Contact& contact = contacts[i];
 
-        vec3 pA = bodyA->position + contact.rA;
-        vec3 pB = bodyB->position + contact.rB;
+        vec3 wA = rotate(contact.rA, bodyA);
+        vec3 wB = rotate(contact.rB, bodyB);
+
+        vec3 pA = bodyA->position + wA;
+        vec3 pB = bodyB->position + wB;
 
         // Precompute C0 - the constraint violation at the beginning of this frame
         // Following 2D: C0 = basis * (pA - pB) + collision_margin
         // Use the stored penetration depth from collision detection
         contacts[i].C0_n = -contacts[i].depth; // Negative because penetration is positive when objects overlap
 
-        vec3 vrel = (bodyA->velocity.linear + glm::cross(bodyA->velocity.angular, contact.rA)) -
-                    (bodyB->velocity.linear + glm::cross(bodyB->velocity.angular, contact.rB));
+        vec3 vrel = (bodyA->velocity.linear + glm::cross(bodyA->velocity.angular, wA)) -
+                    (bodyB->velocity.linear + glm::cross(bodyB->velocity.angular, wB));
 
         // compute tangent data
         vec3 linIndep = fabs(glm::dot(contact.normal, vec3(0, 1, 0))) > 0.95 ? vec3(1, 0, 0) : vec3(0, 1, 0);
         contact.t1 = linIndep - glm::dot(linIndep, contact.normal) * contact.normal;
         contact.t1 = glm::normalize(contact.t1);
-        contact.t2 = glm::cross(contact.t1, contact.normal); // guarunteed to be normal
+        contact.t2 = glm::normalize(glm::cross(contact.t1, contact.normal)); // guarunteed to be normal
 
         // // compute Jacobians
         // contact.JAn = vec6(contact.normal, glm::cross(contact.rA, contact.normal));
@@ -89,8 +91,11 @@ void Manifold::computeConstraint(float alpha) {
         // Goal: C = 0 when objects are just touching, C < 0 when penetrating
         Contact& contact = contacts[i];
 
-        vec3 pA = bodyA->position + contact.rA;
-        vec3 pB = bodyB->position + contact.rB;
+        vec3 wA = rotate(contact.rA, bodyA);
+        vec3 wB = rotate(contact.rB, bodyB);
+
+        vec3 pA = bodyA->position + wA;
+        vec3 pB = bodyB->position + wB;
 
         // Compute separation distance along normal
         // If normal points from B to A, then dot(pA - pB, normal) is positive when separated
