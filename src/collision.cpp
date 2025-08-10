@@ -75,24 +75,13 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     if (DEBUG_PRINT_GJK) print(polytope->front().normal);
 
     // compute contact information
-    contacts[0].normal = -polytope->front().normal;
+    contacts[0].normal = -polytope->front().normal; // TODO ensure 
     contacts[0].depth = polytope->front().distance;
 
     std::pair<vec3, vec3> rs = barycentric(polytope, bodyA, bodyB);
 
     contacts[0].rA = rs.first - bodyA->position;
     contacts[0].rB = rs.second - bodyB->position;
-
-    print("contacts");
-    print(rs.first);
-    print(rs.second);
-    print(bodyA->position);
-    print(bodyB->position);
-
-    print("normal");
-    print(contacts[0].normal);
-
-    // throw std::runtime_error("");
 
     delete polytope;
     return 1;

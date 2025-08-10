@@ -1,5 +1,13 @@
 #include "collision.h"
 
+// helper function
+vec3 projectPointToPlane(const vec3& point, const vec3& normal, const vec3& planePoint) {
+    vec3 diff = point - planePoint;
+    float d = glm::dot(normal, diff);
+    vec3 proj = d * normal;
+    return point - proj;
+}
+
 std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB) {
     // project origin onto triangle
     const Face& face = polytope->front();
@@ -8,9 +16,11 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
     const SupportPoint& sp1 = *face.sps[1];
     const SupportPoint& sp2 = *face.sps[2];
 
+    vec3 proj = projectPointToPlane(vec3(), face.normal, sp0.mink);
+
     vec3 v0 = sp1.mink - sp0.mink;
     vec3 v1 = sp2.mink - sp0.mink;
-    vec3 v2 = -sp0.mink; // origin - sp0
+    vec3 v2 = proj     - sp0.mink;
 
     // compute barycentric coordinates for projection
     float d00 = glm::dot(v0, v0);
@@ -23,15 +33,13 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
 
     if (fabs(denom) == 0) throw std::runtime_error("EPA output a colinear face");
 
-    float v = (d11 * d20 - d01 * d21) / denom;
-    float w = (d00 * d21 - d01 * d20) / denom;
-    float u = 1.0f - v - w;
-
-    vec3 barycentric = glm::clamp(vec3(u, v, w), 0.0f, 1.0f);
+    float beta = (d11 * d20 - d01 * d21) / denom;
+    float gamma = (d00 * d21 - d01 * d20) / denom;
+    float alpha = 1.0f - beta - gamma;
 
     // interpolate points and bodyA and bodyB
-    vec3 PA = u * transform(sp0.indexA, bodyA) + v * transform(sp1.indexA, bodyA) + w * transform(sp2.indexA, bodyA);
-    vec3 PB = u * transform(sp0.indexB, bodyB) + v * transform(sp1.indexB, bodyB) + w * transform(sp2.indexB, bodyB);
+    vec3 PA = alpha * transform(sp0.indexA, bodyA) + beta * transform(sp1.indexA, bodyA) + gamma * transform(sp2.indexA, bodyA);
+    vec3 PB = alpha * transform(sp0.indexB, bodyB) + beta * transform(sp1.indexB, bodyB) + gamma * transform(sp2.indexB, bodyB);
 
     return { PA, PB };
 }
