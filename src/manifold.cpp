@@ -2,12 +2,9 @@
 
 Manifold::Manifold(Solver* solver, Rigid* bodyA, Rigid* bodyB) 
     : Force(solver, bodyA, bodyB), numContacts(0) 
-{
-    // The constructor is minimal, all work is done in initialize
-    for (int i = 0; i < 4; ++i) {
-        contacts[i].C0_n = 0.0f;
-        contacts[i].C0_t = vec3(0);
-    }
+{   
+    // fmax[0] = fmax[2] = 0.0f;
+    // fmin[0] = fmin[2] = -INFINITY;
 }
 
 bool Manifold::initialize() {
@@ -38,11 +35,6 @@ bool Manifold::initialize() {
         vec3 pA = bodyA->position + wA;
         vec3 pB = bodyB->position + wB;
 
-        // Precompute C0 - the constraint violation at the beginning of this frame
-        // Following 2D: C0 = basis * (pA - pB) + collision_margin
-        // Use the stored penetration depth from collision detection
-        contacts[i].C0_n = -contacts[i].depth; // Negative because penetration is positive when objects overlap
-
         vec3 vrel = (bodyA->velocity.linear + glm::cross(bodyA->velocity.angular, wA)) -
                     (bodyB->velocity.linear + glm::cross(bodyB->velocity.angular, wB));
 
@@ -52,30 +44,18 @@ bool Manifold::initialize() {
         contact.t1 = glm::normalize(contact.t1);
         contact.t2 = glm::normalize(glm::cross(contact.t1, contact.normal)); // guarunteed to be normal
 
-        // // compute Jacobians
-        // contact.JAn = vec6(contact.normal, glm::cross(contact.rA, contact.normal));
-        // contact.JBn = vec6(-contact.normal, glm::cross(contact.rB, -contact.normal));
+        // compute derivatives using taylor series to the first degree
+        contact.JAn  = vec6(contact.normal, glm::cross(wA, contact.normal));
+        contact.JAt1 = vec6(contact.t1    , glm::cross(wA, contact.t1)    );
+        contact.JAt2 = vec6(contact.t2    , glm::cross(wA, contact.t2)    );
 
-        // contact.JAt1 = vec6(contact.t1, glm::cross(contact.rA, contact.t1));
-        // contact.JBt1 = vec6(-contact.t1, glm::cross(contact.rB, -contact.t1));
-        // contact.JAt2 = vec6(contact.t2, glm::cross(contact.rA, contact.t2));
-        // contact.JBt2 = vec6(-contact.t2, glm::cross(contact.rB, -contact.t2));
+        contact.JBn  = vec6(-1.0f * contact.normal, -1.0f * glm::cross(wB, contact.normal));
+        contact.JBt1 = vec6(-1.0f * contact.t1    , -1.0f * glm::cross(wB, contact.t1)    );
+        contact.JBt2 = vec6(-1.0f * contact.t2    , -1.0f * glm::cross(wB, contact.t2)    );
 
-        // contact.stick = true;
+        mat3x3 orthonormalBasis = glm::transpose(mat3x3(contact.t1, contact.t2, contact.normal));
 
-        
-        // vec3 displacement = pB - pA; // TODO ensure that this subtraction is in the correct direction
-
-        // contact.C0 = vec3(
-        //     glm::dot(displacement, contact.normal) + COLLISION_MARGIN,
-        //     glm::dot(displacement, contact.t1),
-        //     glm::dot(displacement, contact.t2)
-        // );
-
-        contacts[i].C0_t.x = glm::dot(vrel, contact.t1);
-        contacts[i].C0_t.y = glm::dot(vrel, contact.t2);
-        contacts[i].C0_t.z = 0;
-
+        contact.C0 = orthonormalBasis * (bodyA->position + wA - bodyB->position - wB); // TODO add collision margin
     }
 
     return true;
@@ -97,19 +77,20 @@ void Manifold::computeConstraint(float alpha) {
         vec3 pA = bodyA->position + wA;
         vec3 pB = bodyB->position + wB;
 
+        vec6 dpA = bodyA->getConfiguration() - bodyA->initial;
+        vec6 dpB = bodyB->getConfiguration() - bodyB->initial;
+
         // Compute separation distance along normal
         // If normal points from B to A, then dot(pA - pB, normal) is positive when separated
         float separation = glm::dot(pA - pB, contact.normal);
 
-        // print(separation);
-
         // When C < 0, objects are too close (violating constraint)
         // When C >= 0, objects are properly separated (satisfying constraint)
-        C[i * 3 + 0] = separation;
+        C[i * 3 + 0] = contact.C0[0] * (1 - alpha) + dot(contacts[i].JAn, dpA) + dot(contacts[i].JBn, dpB);
         
         // Disable friction in position solver
-        C[i * 3 + 1] = 0.0f;
-        C[i * 3 + 2] = 0.0f;
+        C[i * 3 + 1] = contact.C0[1] * (1 - alpha) + dot(contacts[i].JAt1, dpA) + dot(contacts[i].JBt1, dpB);
+        C[i * 3 + 2] = contact.C0[2] * (1 - alpha) + dot(contacts[i].JAt2, dpA) + dot(contacts[i].JBt2, dpB);
 
         // --- Update Force Limits for Friction Cone ---
         float friction_limit = friction * abs(lambda[i * 3 + 0]);
@@ -122,32 +103,7 @@ void Manifold::computeConstraint(float alpha) {
         
         // --- Sticking Logic ---
         float tangent_lambda = sqrtf(lambda[i*3+1]*lambda[i*3+1] + lambda[i*3+2]*lambda[i*3+2]);
-        contacts[i].stick = tangent_lambda < friction_limit && length(contacts[i].C0_t) < STICK_THRESH;
-
-        // // Taylor Approximation of C(x)
-        // vec3 newC = contact.C0 * (1.0f - alpha) + vec3(
-        //     dot(contact.JAn, dA) + dot(contact.JBn, dB), // Cn
-        //     dot(contact.JAt1, dA) + dot(contact.JBt1, dB), // Ct1
-        //     dot(contact.JAt2, dA) + dot(contact.JBt2, dB) // Ct2
-        // );
-        
-        // C[i * 3 + 0] = newC.x;
-        // C[i * 3 + 1] = newC.y;
-        // C[i * 3 + 2] = newC.z;
-
-        // // Update friction bounds
-        // float frictionBound = abs(lambda[i * 3 + 0]) * friction;
-        // vec3 newfmax = vec3(0.0f, frictionBound, frictionBound); // n t1 t2
-        // vec3 newfmin = vec3(0.0f, -frictionBound, -frictionBound);
-
-        // fmax[i * 3 + 0] = newfmax.x;
-        // fmax[i * 3 + 1] = newfmax.y;
-        // fmax[i * 3 + 2] = newfmax.z;
-        // fmin[i * 3 + 0] = newfmin.x;
-        // fmin[i * 3 + 1] = newfmin.y;
-        // fmin[i * 3 + 2] = newfmin.z;
-
-        // contact.stick = (abs(lambda[i * 3 + 1]) < frictionBound && abs(lambda[i * 3 + 2]) < frictionBound && abs(contact.C0.y) < STICK_THRESH && abs(contact.C0.z) < STICK_THRESH);
+        contacts[i].stick = tangent_lambda < friction_limit ; //&& length(contacts[i].C0[1]) < STICK_THRESH;
     }
 }
 
@@ -158,35 +114,10 @@ void Manifold::computeDerivatives(Rigid* body) {
         Contact& contact = contacts[i];
 
         bool isA = body == bodyA;
-        float sign = isA ? 1.0f : -1.0f;
-        const vec3& r = isA ? contact.rA : contact.rB;
 
-        J[i * 3 + 0] = vec6(contact.normal * sign, glm::cross(r, contact.normal) * sign);
-        J[i * 3 + 1] = vec6(contact.t1     * sign, glm::cross(r, contact.t1)     * sign);
-        J[i * 3 + 2] = vec6(contact.t2     * sign, glm::cross(r, contact.t2)     * sign);
-
-        // // compute constraint jacobian matrix
-        // mat3x6 JA(contact.JAt1, contact.JAt2, contact.JAn);
-        // mat3x6 JB(contact.JBt1, contact.JBt2, contact.JBn);
-
-        // // hessian term: k * J^T * J
-        // // float k = contact.k;
-        // // mat6x6 HA = transpose(JA) * JA * k;
-        // // mat6x6 HB = transpose(JB) * JB * k;
-
-        // if (body == bodyA)
-        // {
-        //     J[i * 3 + 0] = contacts[i].JAn;
-        //     J[i * 3 + 1] = contacts[i].JAt1;
-        //     J[i * 3 + 2] = contacts[i].JAt2;
-            
-        // }
-        // else
-        // {
-        //     J[i * 3 + 0] = contacts[i].JBn;
-        //     J[i * 3 + 1] = contacts[i].JBt1;
-        //     J[i * 3 + 2] = contacts[i].JBt2;
-        // }
+        J[i * 3 + 0] = isA ? contact.JAn : contact.JBn;
+        J[i * 3 + 1] = isA ? contact.JAt1 : contact.JBt1;
+        J[i * 3 + 2] = isA ? contact.JAt2 : contact.JBt2;
     }
 }
 

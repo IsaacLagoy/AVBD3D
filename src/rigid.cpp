@@ -61,7 +61,7 @@ vec6 Rigid::getConfiguration() const {
 void Rigid::setConfiguration(const vec6& config) {
     if (hasNaN(config.linear)) throw std::runtime_error("setConfiguration has NaN linear component");
     position = config.linear;
-    rotation = expMapSO3(config.angular); // TODO ensure this line is correct.
+    rotation = glm::normalize(expMapSO3(config.angular));
 }
 
 void Rigid::draw() {}

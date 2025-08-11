@@ -174,8 +174,8 @@ void Solver::step(float dt) {
         body->prevVelocity = body->velocity;
         if (body->mass > 0) {
             body->velocity = (body->getConfiguration() - body->initial) / dt;
-            print("velocity");
-            print(body->velocity);
+            // print("velocity");
+            // print(body->velocity);
         }
     }
 }

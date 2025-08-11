@@ -31,11 +31,37 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
 
     float denom = d00 * d11 - d01 * d01;
 
-    if (fabs(denom) == 0) throw std::runtime_error("EPA output a colinear face");
+    float alpha, beta, gamma;
 
-    float beta = (d11 * d20 - d01 * d21) / denom;
-    float gamma = (d00 * d21 - d01 * d20) / denom;
-    float alpha = 1.0f - beta - gamma;
+    // will happen if triangle is nearly colinear
+    if (fabs(denom) == 0) {
+        // fallback, treat triangle as line by using its longest edge
+        vec3 v3 = sp2.mink - sp1.mink;
+        
+        float l10 = glm::length2(v0);
+        float l20 = glm::length2(v1);
+        float l21 = glm::length2(v2);
+
+        vec3 a, b;
+
+        if      (l10 > l20 && l10 > l21) { a = sp0.mink; b = sp1.mink; }
+        else if (l20 > l21)              { a = sp0.mink; b = sp2.mink; } 
+        else                             { a = sp1.mink; b = sp2.mink; } 
+
+        vec3 e = b - a;
+        float t = glm::dot(proj - a, e) / glm::dot(e, e);
+        t = glm::clamp(t, 0.0f, 1.0f);
+
+        alpha = 1.0f - t; 
+        beta = t; 
+        gamma = 0.0f;
+    } else {
+        beta = (d11 * d20 - d01 * d21) / denom;
+        gamma = (d00 * d21 - d01 * d20) / denom;
+        alpha = 1.0f - beta - gamma;
+    }
+
+    
 
     // interpolate points and bodyA and bodyB
     vec3 PA = alpha * Mesh::uniqueVerts[sp0.indexA] + beta * Mesh::uniqueVerts[sp1.indexA] + gamma * Mesh::uniqueVerts[sp2.indexA];

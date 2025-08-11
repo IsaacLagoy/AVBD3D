@@ -25,7 +25,7 @@ int bestDot(Rigid* body, const vec3& dir) {
     // transform dir to model space
     if (DEBUG_PRINT_GJK) print("dir best Dot");
     if (DEBUG_PRINT_GJK) print(dir);
-    vec3 inv = glm::inverse(body->rotation) * dir;
+    vec3 inv = glm::normalize(glm::inverse(body->rotation)) * dir;
     if (DEBUG_PRINT_GJK) print("inv");
     if (DEBUG_PRINT_GJK) print(body->rotation);
     if (DEBUG_PRINT_GJK) print(inv);
@@ -78,8 +78,8 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     if (hasNaN(polytope->front().normal)) std::runtime_error("normal has nan");
 
     if (DEBUG_PRINT_GJK) print("stats");
-    if (DEBUG_PRINT_GJK) print(bodyA->position);
     if (DEBUG_PRINT_GJK) print(polytope->front().normal);
+    if (DEBUG_PRINT_GJK) for (int i = 0; i < 3; i++) print(polytope->front().sps[i]->mink);
 
     // compute contact information
     contacts[0].normal = -polytope->front().normal; // TODO ensure 

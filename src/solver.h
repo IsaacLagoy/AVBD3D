@@ -127,8 +127,6 @@ struct Manifold : Force {
         vec6 JAt1, JBt1; // tangent Jacobian rows
         vec6 JAt2, JBt2; // tangent Jacobian rows in the other direction
         vec3 C0; // accumulated positional error (n, t1, t2)
-        float C0_n;
-        vec3 C0_t;
         bool stick; // static vs dynamic friction
     }; 
 
