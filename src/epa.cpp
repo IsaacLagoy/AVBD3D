@@ -85,6 +85,7 @@ std::optional<Face> Polytope::buildFace(const SupportPoint* pa, const SupportPoi
     if (!sameDirection(face.normal, av - midpoint)) {
         face.normal *= -1;
         face.sps = { pa, pc, pb }; // ensures vertices are ordered to face normal outward.
+        face.distance = projectedDistance(face.normal, av); // recompute distance to positive value
     }
 
     return face;
