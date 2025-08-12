@@ -73,11 +73,9 @@ void Manifold::computeConstraint(float alpha) {
 
         // When C < 0, objects are too close (violating constraint)
         // When C >= 0, objects are properly separated (satisfying constraint)
-        C[i * 3 + 0] = contact.C0[0] * (1 - alpha) + dot(contacts[i].JAn, dpA) + dot(contacts[i].JBn, dpB);
-        
-        // Disable friction in position solver
-        C[i * 3 + 1] = contact.C0[1] * (1 - alpha) + dot(contacts[i].JAt1, dpA) + dot(contacts[i].JBt1, dpB);
-        C[i * 3 + 2] = contact.C0[2] * (1 - alpha) + dot(contacts[i].JAt2, dpA) + dot(contacts[i].JBt2, dpB);
+        C[i * 3 + 0] = contact.C0[0] * (1 - alpha) + dot(contact.JAn,  dpA) + dot(contact.JBn,  dpB);
+        C[i * 3 + 1] = contact.C0[1] * (1 - alpha) + dot(contact.JAt1, dpA) + dot(contact.JBt1, dpB);
+        C[i * 3 + 2] = contact.C0[2] * (1 - alpha) + dot(contact.JAt2, dpA) + dot(contact.JBt2, dpB);
 
         // --- Update Force Limits for Friction Cone ---
         float frictionBound = abs(lambda[i * 3 + 0]) * friction;
@@ -87,7 +85,7 @@ void Manifold::computeConstraint(float alpha) {
         fmin[i * 3 + 2] = -frictionBound;
         
         // --- Sticking Logic ---
-        contact.stick = abs(lambda[i * 3 + 0]) < frictionBound && abs(contact.C0.x) < STICK_THRESH; // TODO check this convertsion to 3d
+        contact.stick = abs(lambda[i * 3 + 1]) < frictionBound && abs(contact.C0.z) < STICK_THRESH; // TODO check this convertsion to 3d
     }
 }
 
@@ -96,10 +94,10 @@ void Manifold::computeDerivatives(Rigid* body) {
     for (int i = 0; i < numContacts; i++)
     {
         Contact& contact = contacts[i];
-
+        
         bool isA = body == bodyA;
 
-        J[i * 3 + 0] = isA ? contact.JAn : contact.JBn;
+        J[i * 3 + 0] = isA ? contact.JAn  : contact.JBn;
         J[i * 3 + 1] = isA ? contact.JAt1 : contact.JBt1;
         J[i * 3 + 2] = isA ? contact.JAt2 : contact.JBt2;
     }

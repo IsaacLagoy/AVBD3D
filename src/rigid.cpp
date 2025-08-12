@@ -76,6 +76,6 @@ vec3 Rigid::deltaWInitial() const {
 }
 
 vec3 Rigid::deltaWInertial() const {
-    quat rel = 2.0f * (rotation * glm::inverse(initialRotation));
+    quat rel = 2.0f * (rotation * glm::inverse(inertialRotation));
     return {rel.x, rel.y, rel.z};
 }

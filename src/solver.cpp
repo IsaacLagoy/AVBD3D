@@ -79,17 +79,9 @@ void Solver::step(float dt) {
 
     // initialize and warmstart bodies (i.e. primal variables)
     for (Rigid* body = bodies; body != nullptr; body = body->next) {
-        body->initialPosition = body->position;
-        body->initialRotation = body->rotation;
-
-        if (body->mass <= 0) {
-            body->inertialPosition = body->position;
-            body->inertialRotation = body->rotation;
-            continue;
-        }
-
-        // compute inertia state
-        body->inertialPosition = body->position + body->velocity.linear * dt + gravity * (dt * dt);
+        // compute inertial state
+        body->inertialPosition = body->position + body->velocity.linear * dt;
+        if (body->mass > 0) body->inertialPosition += gravity * (dt * dt);
 
         quat angVel = quat(0, body->velocity.angular);
         body->inertialRotation = glm::normalize(body->rotation + (0.5f * dt) * angVel * body->rotation);
@@ -101,6 +93,9 @@ void Solver::step(float dt) {
         if (!std::isfinite(accelWeight)) accelWeight = 0.0f;
 
         // Update current state to warm-started prediction
+        body->initialPosition = body->position;
+        body->initialRotation = body->rotation;
+
         body->position += body->velocity.linear * dt + gravity * (accelWeight * dt * dt);
         body->rotation = body->inertialRotation;
     }
@@ -132,13 +127,12 @@ void Solver::step(float dt) {
                     // compute the clamped force magnitude (sec 3.2)
                     float f = glm::clamp(force->penalty[i] * force->C[i] + lambda + force->motor[i], force->fmin[i], force->fmax[i]);
 
+                    mat3x3 G = glm::diagonal3x3(glm::abs(glm::cross(force->J[i].angular, glm::transpose(body->getInertiaTensor()) * force->J[i].angular)) * fabs(f));
+
                     // accumulate force (eq. 13) and hessian (eq. 17)
                     rhs += force->J[i] * f;
-
-                    mat3x3 G = glm::diagonal3x3(glm::abs(glm::cross(force->J[i].angular, glm::transpose(body->getInertiaTensor()) * force->J[i].angular)) * f);
-
                     lhs += outer(force->J[i], force->J[i] * force->penalty[i]);
-                    // lhs.addBottomRight(G);
+                    lhs.addBottomRight(G);
                 }
             }
 
@@ -177,10 +171,7 @@ void Solver::step(float dt) {
     // compute velocities (BDF1)
     for (Rigid* body = bodies; body != nullptr; body = body->next) {
         body->prevVelocity = body->velocity;
-        if (body->mass > 0) {
+        if (body->mass > 0)
             body->velocity = vec6{ body->position - body->initialPosition, body->deltaWInitial() } / dt;
-            // print("velocity");
-            // print(body->velocity);
-        }
     }
 }
