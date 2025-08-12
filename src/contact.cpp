@@ -17,7 +17,6 @@ std::pair<vec3, vec3> projectbcs(const SupportPoint& sp0, const SupportPoint& sp
 }
 
 std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB) {
-    // project origin onto triangle
     const Face& face = polytope->front();
 
     // rename data
@@ -116,4 +115,60 @@ float alpha = 1.0f - beta - gamma;
 
 return projectbcs(sp0, sp1, sp2, {alpha, beta, gamma});
 
+}
+
+// 6 test cases to watch for
+// face to face (2, 2)
+// edge to edge (1, 1)
+// edge to face (1, 2)
+// vertex to face (0, 2)
+// vertex to edge (0, 1)
+// vertex to vertex (0, 0)
+
+int getAffine(const std::array<const SupportPoint*, 3>& sps, bool isA) {
+    // rename data
+    int sp0 = isA ? sps[0]->indexA : sps[0]->indexB;
+    int sp1 = isA ? sps[1]->indexA : sps[1]->indexB;
+    int sp2 = isA ? sps[2]->indexA : sps[2]->indexB;
+
+    // check for identical points
+    if (sp0 == sp1 && sp0 == sp2) return 0;
+
+    // find model space locations of vertices
+    const vec3& a0 = Mesh::uniqueVerts[sp0];
+    const vec3& a1 = Mesh::uniqueVerts[sp1];
+    const vec3& a2 = Mesh::uniqueVerts[sp2];
+
+    return 1;
+}
+
+vec3 closestPointOnLine(const vec3& u0, const vec3& u1, const vec3& v) {
+
+}
+
+std::pair<vec3, vec3> getContact(Polytope* polytope, Rigid* bodyA, Rigid* bodyB) {
+    // determine affine relationships
+    int affineA = getAffine(polytope->front().sps, true);
+    int affineB = getAffine(polytope->front().sps, false);
+
+    // rename data
+    const Face& face = polytope->front();
+
+    const SupportPoint& sp0 = *face.sps[0];
+    const SupportPoint& sp1 = *face.sps[1];
+    const SupportPoint& sp2 = *face.sps[2];
+
+    const vec3& a0 = Mesh::uniqueVerts[sp0.indexA];
+    const vec3& a1 = Mesh::uniqueVerts[sp1.indexA];
+    const vec3& a2 = Mesh::uniqueVerts[sp2.indexA];
+    
+    const vec3& b0 = Mesh::uniqueVerts[sp0.indexB];
+    const vec3& b1 = Mesh::uniqueVerts[sp1.indexB];
+    const vec3& b2 = Mesh::uniqueVerts[sp2.indexB];
+
+    // check vertex - vertex
+    if (affineA == 0 && affineB == 0) return { a0, b0 };
+
+    // // check vertex - edge
+    // if (affineA == 0 && affineB == 1) return { a0, closestPointOnLine() };
 }

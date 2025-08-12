@@ -91,3 +91,4 @@ bool gjk(Rigid* bodyA, Rigid* bodyB, Simplex& simplex);
 bool epa(Rigid* bodyA, Rigid* bodyB, Polytope* polytope);
 
 std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB);
+std::pair<vec3, vec3> getContact(Polytope* polytope, Rigid* bodyA, Rigid* bodyB);

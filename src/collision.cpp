@@ -77,14 +77,15 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     contacts[0].depth = polytope->front().distance;
 
     std::pair<vec3, vec3> rs = barycentric(polytope, bodyA, bodyB);
+    // std::pair<vec3, vec3> rs = getContact(polytope, bodyA, bodyB);
 
     contacts[0].rA = rs.first;
     contacts[0].rB = rs.second;
 
-    print("contacts");
-    print(contacts[0].rA);
-    print(contacts[0].rB);
-    print(contacts[0].normal);
+    // print("contacts");
+    // print(contacts[0].rA);
+    // print(contacts[0].rB);
+    // print(contacts[0].normal);
 
     delete polytope;
     return 1;
