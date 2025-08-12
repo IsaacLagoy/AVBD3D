@@ -56,12 +56,11 @@ void Solver::step(float dt) {
     // initialize and warmstart forces
     for (Force* force = forces; force != nullptr;) {
         // initialization can include caching anything that is constant over the step
-        bool inited = force->initialize();
-        if (!inited) {
+        if (!force->initialize()) {
             // force has returned false meaning it is inactive, so remove it from the solver
             Force* next = force->next;
             delete force;
-            force = next;
+            force = next; 
         } else {
             for (int i = 0; i < force->rows(); i++) {
                 // warmstart the dual variables and penalty parameters (Eq. 19)
@@ -80,26 +79,30 @@ void Solver::step(float dt) {
 
     // initialize and warmstart bodies (i.e. primal variables)
     for (Rigid* body = bodies; body != nullptr; body = body->next) {
-        body->initial = body->getConfiguration();
+        body->initialPosition = body->position;
+        body->initialRotation = body->rotation;
 
-        if (body->mass > 0) {
-            // compute inertia state
-            body->inertial.linear = body->position + body->velocity.linear * dt + gravity * (dt * dt);
-            quat w_q(body->velocity.angular.x, body->velocity.angular.y, body->velocity.angular.z, 0);
-            body->inertial.angular = logMapSO3(normalize(body->rotation + (w_q * body->rotation) * (dt * 0.5f)));
-
-            // adaptive warmstarting
-            vec3 accel = (body->velocity.linear - body->prevVelocity.linear) / dt;
-            float accelExt = dot(accel, normalize(gravity));
-            float accelWeight = glm::clamp(accelExt / length(gravity), 0.0f, 1.0f);
-            if (!std::isfinite(accelWeight)) accelWeight = 0.0f;
-
-            // Update current state to warm-started prediction
-            body->position += body->velocity.linear * dt + gravity * (accelWeight * dt * dt);
-            body->rotation = expMapSO3(body->inertial.angular);
-        } else {
-            body->inertial = body->getConfiguration();
+        if (body->mass <= 0) {
+            body->inertialPosition = body->position;
+            body->inertialRotation = body->rotation;
+            continue;
         }
+
+        // compute inertia state
+        body->inertialPosition = body->position + body->velocity.linear * dt + gravity * (dt * dt);
+
+        quat angVel = quat(0, body->velocity.angular);
+        body->inertialRotation = glm::normalize(body->rotation + (0.5f * dt) * angVel * body->rotation);
+
+        // adaptive warmstarting
+        vec3 accel = (body->velocity.linear - body->prevVelocity.linear) / dt;
+        float accelExt = dot(accel, normalize(gravity));
+        float accelWeight = glm::clamp(accelExt / length(gravity), 0.0f, 1.0f);
+        if (!std::isfinite(accelWeight)) accelWeight = 0.0f;
+
+        // Update current state to warm-started prediction
+        body->position += body->velocity.linear * dt + gravity * (accelWeight * dt * dt);
+        body->rotation = body->inertialRotation;
     }
 
     if (DEBUG_PRINT) print("Main Loop");
@@ -114,7 +117,7 @@ void Solver::step(float dt) {
             // initialize left and right hand sides of the linear system (Eqs. 5, 6)
             mat6x6 M = body->getMassMatrix();
             mat6x6 lhs = M / (dt * dt);
-            vec6 rhs = lhs * (body->getConfiguration() - body->inertial);
+            vec6 rhs = lhs * vec6{ body->position - body->inertialPosition, body->deltaWInertial() };
 
             // iterate over all acting on the body
             for (Force* force = body->forces; force != nullptr; force = (force->bodyA == body) ? force->nextA : force->nextB) {
@@ -132,16 +135,18 @@ void Solver::step(float dt) {
                     // accumulate force (eq. 13) and hessian (eq. 17)
                     rhs += force->J[i] * f;
 
-                    mat3x3 G = glm::diagonal3x3(glm::abs(glm::cross(force->J[i].angular, glm::transpose(body->getInvInertiaTensor()) * force->J[i].angular)) * f);
+                    mat3x3 G = glm::diagonal3x3(glm::abs(glm::cross(force->J[i].angular, glm::transpose(body->getInertiaTensor()) * force->J[i].angular)) * f);
 
                     lhs += outer(force->J[i], force->J[i] * force->penalty[i]);
-                    lhs.addBottomRight(G);
+                    // lhs.addBottomRight(G);
                 }
             }
 
             // solve the SPD linear system using LDL and apply the update (Eq. 4)
-            body->setConfiguration(body->getConfiguration() - solve(lhs, rhs));
-            // print(solve(lhs, rhs));
+            vec6 delta = solve(lhs, rhs);
+            body->position -= delta.linear;
+            quat dq = quat(0.0f, delta.angular);
+            body->rotation = glm::normalize(body->rotation - 0.5f * (dq * body->rotation));
         }
 
         // dual update
@@ -173,7 +178,7 @@ void Solver::step(float dt) {
     for (Rigid* body = bodies; body != nullptr; body = body->next) {
         body->prevVelocity = body->velocity;
         if (body->mass > 0) {
-            body->velocity = (body->getConfiguration() - body->initial) / dt;
+            body->velocity = vec6{ body->position - body->initialPosition, body->deltaWInitial() } / dt;
             // print("velocity");
             // print(body->velocity);
         }

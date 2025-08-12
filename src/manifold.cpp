@@ -3,8 +3,11 @@
 Manifold::Manifold(Solver* solver, Rigid* bodyA, Rigid* bodyB) 
     : Force(solver, bodyA, bodyB), numContacts(0) 
 {   
-    // fmax[0] = fmax[2] = 0.0f;
-    // fmin[0] = fmin[2] = -INFINITY;
+    // set all normal f limits
+    for (int i = 0; i < 4; i++) {
+        fmax[i * 3] = 0.0f;
+        fmin[i * 3] = -INFINITY;
+    }
 }
 
 bool Manifold::initialize() {
@@ -31,12 +34,6 @@ bool Manifold::initialize() {
 
         vec3 wA = rotate(contact.rA, bodyA);
         vec3 wB = rotate(contact.rB, bodyB);
-
-        vec3 pA = bodyA->position + wA;
-        vec3 pB = bodyB->position + wB;
-
-        vec3 vrel = (bodyA->velocity.linear + glm::cross(bodyA->velocity.angular, wA)) -
-                    (bodyB->velocity.linear + glm::cross(bodyB->velocity.angular, wB));
 
         // compute tangent data
         vec3 linIndep = fabs(glm::dot(contact.normal, vec3(0, 1, 0))) > 0.95 ? vec3(1, 0, 0) : vec3(0, 1, 0);
@@ -71,18 +68,8 @@ void Manifold::computeConstraint(float alpha) {
         // Goal: C = 0 when objects are just touching, C < 0 when penetrating
         Contact& contact = contacts[i];
 
-        vec3 wA = rotate(contact.rA, bodyA);
-        vec3 wB = rotate(contact.rB, bodyB);
-
-        vec3 pA = bodyA->position + wA;
-        vec3 pB = bodyB->position + wB;
-
-        vec6 dpA = bodyA->getConfiguration() - bodyA->initial;
-        vec6 dpB = bodyB->getConfiguration() - bodyB->initial;
-
-        // Compute separation distance along normal
-        // If normal points from B to A, then dot(pA - pB, normal) is positive when separated
-        float separation = glm::dot(pA - pB, contact.normal);
+        vec6 dpA = { bodyA->position - bodyA->initialPosition, bodyA->deltaWInitial() };
+        vec6 dpB = { bodyB->position - bodyB->initialPosition, bodyB->deltaWInitial() };
 
         // When C < 0, objects are too close (violating constraint)
         // When C >= 0, objects are properly separated (satisfying constraint)
@@ -93,17 +80,14 @@ void Manifold::computeConstraint(float alpha) {
         C[i * 3 + 2] = contact.C0[2] * (1 - alpha) + dot(contacts[i].JAt2, dpA) + dot(contacts[i].JBt2, dpB);
 
         // --- Update Force Limits for Friction Cone ---
-        float friction_limit = friction * abs(lambda[i * 3 + 0]);
-        fmin[i * 3 + 1] = -friction_limit;
-        fmax[i * 3 + 1] =  friction_limit;
-        fmin[i * 3 + 2] = -friction_limit;
-        fmax[i * 3 + 2] =  friction_limit;
-        fmin[i * 3 + 0] = -INFINITY; // Allow negative forces (pushing apart)
-        fmax[i * 3 + 0] = 0;       // Prevent positive forces (pulling together)
+        float frictionBound = abs(lambda[i * 3 + 0]) * friction;
+        fmax[i * 3 + 1] = frictionBound;
+        fmin[i * 3 + 1] = -frictionBound;
+        fmax[i * 3 + 2] = frictionBound;
+        fmin[i * 3 + 2] = -frictionBound;
         
         // --- Sticking Logic ---
-        float tangent_lambda = sqrtf(lambda[i*3+1]*lambda[i*3+1] + lambda[i*3+2]*lambda[i*3+2]);
-        contacts[i].stick = tangent_lambda < friction_limit ; //&& length(contacts[i].C0[1]) < STICK_THRESH;
+        contact.stick = abs(lambda[i * 3 + 0]) < frictionBound && abs(contact.C0.x) < STICK_THRESH; // TODO check this convertsion to 3d
     }
 }
 

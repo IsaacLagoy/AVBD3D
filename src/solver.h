@@ -30,12 +30,15 @@ struct Rigid {
 
     vec6 velocity = vec6(0); // linear 3, angular 3
     vec6 prevVelocity = vec6(0);
-    vec6 initial;
-    vec6 inertial;
+
+    vec3 initialPosition;
+    quat initialRotation;
+    vec3 inertialPosition;
+    quat inertialRotation;
 
     vec3 scale;
     float mass;
-    mat3x3 invInertiaTensor;
+    mat3x3 inertiaTensor;
     float friction;
     float radius;
 
@@ -46,13 +49,14 @@ struct Rigid {
           vec6 velocity = vec6(), vec4 color = vec4(0.8, 0.8, 0.8, 1));
     ~Rigid();
 
-    vec6 getConfiguration() const;
-    void setConfiguration(const vec6& config);
     bool constrainedTo(Rigid* other) const;
     void draw();
 
-    mat3x3 getInvInertiaTensor() const;
+    mat3x3 getInertiaTensor() const;
     mat6x6 getMassMatrix() const;
+
+    vec3 deltaWInitial() const;
+    vec3 deltaWInertial() const;
 };
 
 // Provides constraint parameters and common interface for all forces.
@@ -295,5 +299,7 @@ vec3 rotate(int index, Rigid* body);
 
 // linear algebra
 vec6 solve(const mat6x6& lhs, const vec6& rhs);
+
+
 
 #endif

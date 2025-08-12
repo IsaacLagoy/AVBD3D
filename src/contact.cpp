@@ -38,6 +38,7 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
         // fallback, treat triangle as line by using its longest edge
         vec3 v3 = sp2.mink - sp1.mink;
         
+        // find longest edge
         float l10 = glm::length2(v0);
         float l20 = glm::length2(v1);
         float l21 = glm::length2(v2);
@@ -48,6 +49,7 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
         else if (l20 > l21)              { a = sp0.mink; b = sp2.mink; } 
         else                             { a = sp1.mink; b = sp2.mink; } 
 
+        // compute projection onto line
         vec3 e = b - a;
         float t = glm::dot(proj - a, e) / glm::dot(e, e);
         t = glm::clamp(t, 0.0f, 1.0f);

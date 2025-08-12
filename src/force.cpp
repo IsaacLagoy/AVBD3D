@@ -26,10 +26,12 @@ Force::Force(Solver* solver, Rigid* bodyA, Rigid* bodyB) : solver(solver), bodyA
 
         C[i] = 0.0f;
         motor[i] = 0.0f;
-        stiffness[i] = 0.0f; // default to soft
+
+        stiffness[i] = INFINITY;
         fmax[i] = INFINITY;
         fmin[i] = -INFINITY;
         fracture[i] = INFINITY;
+
         penalty[i] = 0.0f;
         lambda[i] = 0.0f;
     }

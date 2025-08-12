@@ -85,7 +85,8 @@ quat expMapSO3(vec3 omega) {
 
     vec3 axis = omega / angle;
     float halfAngle = 0.5f * angle;
-    return quat(cos(halfAngle), axis * sin(halfAngle));
+
+    return glm::normalize(quat(cos(halfAngle), axis * sin(halfAngle)));
 }
 
 mat3x3 skewSymmetricCrossProductMatrix(const vec3& vec) {

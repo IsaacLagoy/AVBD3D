@@ -82,7 +82,7 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     if (DEBUG_PRINT_GJK) for (int i = 0; i < 3; i++) print(polytope->front().sps[i]->mink);
 
     // compute contact information
-    contacts[0].normal = -polytope->front().normal; // TODO ensure 
+    contacts[0].normal = polytope->front().normal;
     contacts[0].depth = polytope->front().distance;
 
     std::pair<vec3, vec3> rs = barycentric(polytope, bodyA, bodyB);
