@@ -6,6 +6,29 @@ This is a 3D implementation of Augmented Vertex Block Descent designed by Roblox
 
 This project is still work in progress. I am going through the stages of leaning how AVBD works and debugging my code. I would love feedback if you have any tips on what may be wrong!
 
+## Building
+To clone the repo:
+
+```bash
+git clone https://github.com/IsaacLagoy/CPPPhysics.git
+```
+
+Make sure that you have cmake and a C++ compiler installed.
+
+To build:
+
+```bash
+mkdir build
+cd build
+cmake ..
+cmake --build .
+```
+
+To run:
+```
+./render
+```
+
 ## About This Version
 
 To be compatible with the future C++ version of [Baslisk Engine](https://github.com/BasiliskGroup/BasiliskEngine), this project uses the following packages for rendering with OpenGL and linear algebra:
@@ -49,29 +72,6 @@ There are many type and variable changes during the conversion from 2D to 3D, so
 | `float2 normal` | `vec3 normal` |
 | `float2 C0` | `vec3 C0` |
 | `NUM_CONTACTS = 2` | `NUM_CONTACTS = 4` |
-
-## Building
-To clone the repo:
-
-```bash
-git clone https://github.com/IsaacLagoy/CPPPhysics.git
-```
-
-Make sure that you have cmake and a C++ compiler installed.
-
-To build:
-
-```bash
-mkdir build
-cd build
-cmake ..
-cmake --build .
-```
-
-To run:
-```
-./render
-```
 
 ## Relevant Links
 - University of Utah Project Page - https://graphics.cs.utah.edu/research/projects/avbd/
