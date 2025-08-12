@@ -24,6 +24,8 @@ add_executable(render
     src/manifold.cpp
     src/force.cpp
     src/collision.cpp
+    src/gjk.cpp
+    src/epa.cpp
     src/mesh.cpp
     src/contact.cpp
     src/vec6.cpp

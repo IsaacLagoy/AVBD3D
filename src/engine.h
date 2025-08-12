@@ -33,6 +33,7 @@ class Engine {
     GLFWwindow* window;
     Shader* shader;
     Rigid*& bodies;
+    Force*& forces;
     Camera camera;
     unsigned int VAO, VBOPositions, VBONormals, EBO;
 
@@ -49,7 +50,9 @@ class Engine {
         const char* title,
         const char* vertexShaderPath,
         const char* fragmentShaderPath,
-        Rigid*& bodies);
+        Rigid*& bodies,
+        Force*& forces
+    );
     ~Engine();
 
     

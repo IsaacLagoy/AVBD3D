@@ -37,8 +37,10 @@ Engine::Engine(int width,
                const char* title,
                const char* vertexPath,
                const char* fragmentPath,
-               Rigid*& bodies)
-    : window(nullptr), shader(nullptr), bodies(bodies)
+               Rigid*& bodies,
+               Force*& forces
+)
+    : window(nullptr), shader(nullptr), bodies(bodies), forces(forces)
 {
     if(!initOpenGL()) {
         std::cerr << "Failed to initialize OpenGL and GLFW" << std::endl;
@@ -112,17 +114,48 @@ void Engine::render() {
     // Bind the VAO
     glBindVertexArray(VAO);
 
+    glm::mat4 model;
+
     // Iterate through all rigid bodies in the physics engine and render them
     for (Rigid* rigid = bodies; rigid != 0; rigid = rigid->next) {
         // Calculate the model matrix for the current rigid body
         // This includes translation (position), rotation, and scaling
-        glm::mat4 model = buildModelMatrix(rigid);
+        model = buildModelMatrix(rigid);
 
         // Pass the model matrix to the shader
         shader->setMat4("model", model);
         shader->setVec3("objectColor", rigid->color);
 
         // Draw the cube
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    }
+
+    // render all forces
+    for (Force* force = forces; force != 0; force = force->next) {
+        Manifold* man = (Manifold*) force;
+
+        vec3 rA = transform(man->contacts[0].rA, man->bodyA);
+        vec3 rB = transform(man->contacts[0].rB, man->bodyB);
+
+        model = buildModelMatrix(rA, vec3(0.1f), quat(1, 0, 0, 0));
+        shader->setMat4("model", model);
+        shader->setVec3("objectColor", vec4(1, 0, 0, 1));
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+
+        model = buildModelMatrix(rB, vec3(0.1f), quat(1, 0, 0, 0));
+        shader->setMat4("model", model);
+        shader->setVec3("objectColor", vec4(0, 0, 1, 1));
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+
+        // connect the two shapes
+        vec3 dir = rB - rA;
+        float dist = glm::length(dir);
+        quat look = glm::quatLookAt(dist < 1e-9f ? vec3{ 0, 1, 0, } : glm::normalize(dir), vec3{0, 1, 0});
+        vec3 center = (rA + rB) * 0.5f;
+
+        model = buildModelMatrix(center, vec3(0.02, 0.02, glm::length(dir)), look);
+        shader->setMat4("model", model);
+        shader->setVec3("objectColor", vec4(1, 0, 1, 1));
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
     }
 }

@@ -77,7 +77,9 @@ struct Polytope {
 };
 
 
+
 // function declarations
+SupportPoint getSupportPoint(Rigid* bodyA, Rigid* bodyB, const vec3& dir);
 bool handleSimplex(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
 bool      simplex0(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
 bool      simplex1(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);

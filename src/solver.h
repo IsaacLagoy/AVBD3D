@@ -46,7 +46,7 @@ struct Rigid {
     vec4 color;
 
     Rigid(Solver* solver, vec3 size, float density, float friction, vec3 position,
-          vec6 velocity = vec6(), vec4 color = vec4(0.8, 0.8, 0.8, 1));
+          vec6 velocity = vec6(), vec4 color = vec4(0.8, 0.8, 0.8, 0.5));
     ~Rigid();
 
     bool constrainedTo(Rigid* other) const;
@@ -291,6 +291,7 @@ struct Mesh {
 
 // helper functions
 mat4x4 buildModelMatrix(const Rigid* b);
+mat4x4 buildModelMatrix(const vec3& pos, const vec3& sca, const quat& rot);
 vec3 transform(const vec3& vertex, Rigid* body);
 vec3 transform(int index, Rigid* body);
 

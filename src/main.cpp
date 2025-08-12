@@ -21,11 +21,11 @@ int main() {
     new Rigid(&solver, {5, 0.25f, 5}, -1.0f, 0.5f, {0, -1.0f, 0});
 
     for (int i = 0; i < 1; ++i) {
-        new Rigid(&solver, vec3(0.5f), 1.0f, 0.4f, vec3(uniform(-diff, diff), uniform(1.0f, diff), uniform(-diff, diff)), vec6());
+        new Rigid(&solver, vec3(0.5f), 1.0f, 0.4f, vec3(0.0f, 0.5f, 0.0f) + vec3(uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff)), vec6());
     }
 
     // 2. Create rendering engine and pass bodies
-    Engine engine(800, 600, "AVBD Cuboids", "shaders/vertex.glsl", "shaders/fragment.glsl", solver.bodies);
+    Engine engine(800, 600, "AVBD Cuboids", "shaders/vertex.glsl", "shaders/fragment.glsl", solver.bodies, solver.forces);
 
     // track time
     std::__1::chrono::steady_clock::time_point lastFrameTime = std::chrono::steady_clock::now();
