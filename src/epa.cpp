@@ -23,9 +23,9 @@ Polytope::Polytope(const Simplex& simplex) : sps(), pq(), vertTot(0) {
 
     // add faces with correct combinations
     add(buildFace(pts[0], pts[1], pts[2]).value()); 
-    add(buildFace(pts[0], pts[1], pts[3]).value()); 
+    add(buildFace(pts[0], pts[3], pts[1]).value()); 
     add(buildFace(pts[0], pts[2], pts[3]).value()); 
-    add(buildFace(pts[1], pts[2], pts[3]).value()); 
+    add(buildFace(pts[1], pts[3], pts[2]).value()); 
 }
 
 Polytope::~Polytope() {}
@@ -64,28 +64,23 @@ std::optional<Face> Polytope::buildFace(const SupportPoint* pa, const SupportPoi
     Face face = Face();
 
     // find normal and distance from plane to origin
-    face.normal = glm::cross(bv - av, cv - av);
-    if (glm::length2(face.normal) < 1e-8f) {
-        return std::nullopt; // face is degenerate
-    } else {
-        face.normal = glm::normalize(face.normal);
-    }
+    vec3 u = bv - av;
+    vec3 v = cv - av;
+    face.normal = glm::cross(u, v);
 
-    // signed distance from origin to plane
-    face.distance = projectedDistance(face.normal, av); // assumes plane passes through av
+    if (glm::length2(face.normal) < 1e-10f) return std::nullopt; // face is degenerate
+    face.normal = glm::normalize(face.normal);
+
+    face.distance = projectedDistance(face.normal, av);
     
     // initialize winding order
     face.sps = { pa, pb, pc };
 
-    // test if face is coplanar with the origin. if so, use the polytope center instead of origin to determine normal direction
-    vec3 midpoint = vec3(0);
-    if (std::abs(glm::dot(face.normal, av)) < 1e-6f) midpoint = vertTot / (float) sps.size();
-
     // check winding order
-    if (!sameDirection(face.normal, av - midpoint)) {
+    if (face.distance < 0) {
         face.normal *= -1;
+        face.distance *= -1;
         face.sps = { pa, pc, pb }; // ensures vertices are ordered to face normal outward.
-        face.distance = projectedDistance(face.normal, av); // recompute distance to positive value
     }
 
     return face;

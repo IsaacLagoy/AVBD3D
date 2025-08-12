@@ -10,7 +10,7 @@ This project is still work in progress. I am going through the stages of leaning
 To clone the repo:
 
 ```bash
-git clone https://github.com/IsaacLagoy/CPPPhysics.git
+git clone https://github.com/IsaacLagoy/AVBD3D.git
 ```
 
 Make sure that you have cmake and a C++ compiler installed.

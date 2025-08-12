@@ -84,6 +84,7 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     print("contacts");
     print(contacts[0].rA);
     print(contacts[0].rB);
+    print(contacts[0].normal);
 
     delete polytope;
     return 1;

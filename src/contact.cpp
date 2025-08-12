@@ -9,7 +9,7 @@ vec3 projectPointToPlane(const vec3& point, const vec3& normal, const vec3& plan
 }
 
 std::pair<vec3, vec3> projectbcs(const SupportPoint& sp0, const SupportPoint& sp1, const SupportPoint& sp2, const vec3& bcs) {
-    // interpolate points and bodyA and bodyB
+    // interpolate points and bodyA and bodyB in model space
     vec3 PA = bcs[0] * Mesh::uniqueVerts[sp0.indexA] + bcs[1] * Mesh::uniqueVerts[sp1.indexA] + bcs[2] * Mesh::uniqueVerts[sp2.indexA];
     vec3 PB = bcs[0] * Mesh::uniqueVerts[sp0.indexB] + bcs[1] * Mesh::uniqueVerts[sp1.indexB] + bcs[2] * Mesh::uniqueVerts[sp2.indexB];
 

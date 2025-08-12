@@ -32,8 +32,8 @@ bool Manifold::initialize() {
     for (int i = 0; i < numContacts; i++) {
         Contact& contact = contacts[i];
 
-        vec3 wA = rotate(contact.rA, bodyA);
-        vec3 wB = rotate(contact.rB, bodyB);
+        vec3 wA = transform(contact.rA, bodyA);
+        vec3 wB = transform(contact.rB, bodyB);
 
         // compute tangent data
         vec3 linIndep = fabs(glm::dot(contact.normal, vec3(0, 1, 0))) > 0.95 ? vec3(1, 0, 0) : vec3(0, 1, 0);

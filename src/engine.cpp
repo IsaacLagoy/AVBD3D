@@ -147,7 +147,7 @@ void Engine::render() {
         shader->setVec3("objectColor", vec4(0, 0, 1, 1));
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
-        // connect the two shapes
+        // connect the two contact points
         vec3 dir = rB - rA;
         float dist = glm::length(dir);
         quat look = glm::quatLookAt(dist < 1e-9f ? vec3{ 0, 1, 0, } : glm::normalize(dir), vec3{0, 1, 0});
@@ -156,6 +156,15 @@ void Engine::render() {
         model = buildModelMatrix(center, vec3(0.02, 0.02, glm::length(dir)), look);
         shader->setMat4("model", model);
         shader->setVec3("objectColor", vec4(1, 0, 1, 1));
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+
+        // project normal
+        vec3 n = man->contacts[0].normal;
+        look = glm::quatLookAt(n, vec3{0, 1, 0});
+        vec3 nCenter = center + n * 0.5f;
+        model = buildModelMatrix(nCenter, vec3(0.02, 0.02, glm::length(n)), look);
+        shader->setMat4("model", model);
+        shader->setVec3("objectColor", vec4(0, 1, 0, 1));
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
     }
 }
