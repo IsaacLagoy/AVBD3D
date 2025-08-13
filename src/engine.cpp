@@ -219,6 +219,8 @@ bool Engine::initOpenGL() {
     }
     glfwMakeContextCurrent(window);
 
+    glfwSwapInterval(0);
+
     // Load OpenGL function pointers using GLAD
     if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
         std::cerr << "Failed to initialize GLAD" << std::endl;
