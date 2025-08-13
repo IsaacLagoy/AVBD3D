@@ -16,28 +16,11 @@ target_include_directories(stb INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 include(FetchContent)
 add_subdirectory(include)
 
-add_executable(render
-    src/helper.cpp
-    src/engine.cpp
-    src/main.cpp
-    src/shader.cpp
-    src/solver.cpp
-    src/rigid.cpp
-    src/camera.cpp
-    src/includes.cpp
-    src/manifold.cpp
-    src/force.cpp
-    src/collision.cpp
-    src/gjk.cpp
-    src/epa.cpp
-    src/mesh.cpp
-    src/contact.cpp
-    src/vec6.cpp
-    src/mat6x6.cpp
-    src/mat3x6.cpp
-    src/mat6x3.cpp
-    src/linear.cpp
-)
+# Search recursively for all .cpp files in src/
+file(GLOB_RECURSE SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+
+# Then use that list to build the executable
+add_executable(render ${SRC_FILES})
 
 target_include_directories(render PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(render glad glfw glm assimp stb)
