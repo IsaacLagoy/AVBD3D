@@ -6,6 +6,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glfw)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(GLFW_USE_WAYLAND ON CACHE BOOL "" FORCE)
+endif()
+
 # include glm
 FetchContent_Declare(
   glm

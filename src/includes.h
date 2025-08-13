@@ -22,7 +22,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-// import assimp
+// import assimp Jonah Stuff
 #include <assimp/scene.h>
 #include <stb/stb_image.h>
 

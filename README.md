@@ -20,7 +20,7 @@ To build:
 ```bash
 mkdir build
 cd build
-cmake ..
+cmake -DUSE_WAYLAND=OFF ..
 cmake --build .
 ```
 

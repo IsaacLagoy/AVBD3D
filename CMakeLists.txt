@@ -25,8 +25,7 @@ add_executable(render ${SRC_FILES})
 target_include_directories(render PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(render glad glfw glm assimp stb)
 
-# ADD THESE LINES TO COPY SHADERS
-# Ensure the 'shaders' directory exists in the build output
+# add shaders folder to build
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/shaders)
-# Copy the contents of your source shaders directory to the build shaders directory
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/shaders DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+# TODO add same two lines to include textures folder
