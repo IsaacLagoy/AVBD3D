@@ -8,6 +8,7 @@
 #include <memory>
 #include <unordered_map>
 
+// import glad and glfw
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -20,6 +21,10 @@
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+
+// import assimp
+#include <assimp/scene.h>
+#include <stb/stb_image.h>
 
 #define DEBUG_PRINT false
 #define DEBUG_LINEAR_PRINT false

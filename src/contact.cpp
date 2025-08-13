@@ -174,20 +174,60 @@ affline getAffine(const std::array<const SupportPoint*, 3>& sps, bool isA) {
 }
 
 vec3 closestPointOnLine(const vec3& u0, const vec3& u1, const vec3& v) {
-
+    vec3 ab = u1 - u0;
+    float t = glm::dot(v - u0, ab) / glm::dot(ab, ab);
+    t = glm::clamp(t, 0.0f, 1.0f);
+    return u0 + t * ab;
 }
 
+// may need to be barycentric
 vec3 closestPointOnFace(const vec3& a, const vec3& b, const vec3& c, const vec3& p) {
-
+    // shouldn't be collinear
+    vec3 n = glm::cross(b - a, c - a);
+    float t = (glm::dot(n, p) - glm::length(n)) / glm::dot(n, n);
+    return p - t * n;
 }
 
-vec3 closestPointToLine(const vec3& u0, const vec3& u1, const vec3& v0, const vec3& v1) {
-    
+std::pair<vec3, vec3> closestPointBetweenLines(const vec3& u0, const vec3& u1, const vec3& v0, const vec3& v1) {
+    // we are assuming that lines are not degenerate
+    vec3 d1 = u1 - u0;
+    vec3 d2 = v1 - v0;
+    vec3 r  = u0 - v0;
+    float a = glm::dot(d1, d1);
+    float e = glm::dot(d2, d2);
+    float f = glm::dot(d2, r);
+
+    // general nondegenerate case
+    float c = glm::dot(d1, r);
+    float b = glm::dot(d1, d2);
+    float denom = a * e - b * b;
+
+    // if segments are not parallel, compute the closest point on L1 to L2 and clamp to segment S1. Else pick arbitrary s (here 0)
+    float s;
+    if (denom != 0) s = glm::clamp((b * f - c * e) / denom, 0.0f, 1.0f);
+    else s = 0.0f;
+
+    // copmute point on L2 closest to S1(s)
+    float t = (b * s + f) / e;
+
+    if (t < 0.0f) {
+        t = 0.0f;
+        s = glm::clamp(-c / a, 0.0f, 1.0f);
+    } else if (t > 1.0f) {
+        t = 1.0f;
+        s = glm::clamp((b - c) / a, 0.0f, 1.0f);
+    }
+
+    vec3 c1 = u0 + d1 * s;
+    vec3 c2 = v0 + d2 * t;
+    return { c1, c2 };
 }
 
-// here should be 1 or infinite solutions
+// these need to be projected to 2d
+
+// line segment to triangle
 void closestPointToFace(std::vector<vec3>& pts, const vec3& v0, const vec3& v1, const vec3& a, const vec3& b, const vec3& c) {
-
+    
 }
 
 // check for no solution
@@ -235,10 +275,7 @@ std::pair<vec3, vec3> getContact(Polytope* polytope, Rigid* bodyA, Rigid* bodyB)
     if (affA.dim == 2 && affB.dim == 0) return { closestPointOnFace(a0, a1, a2, b0), b0 };
 
     // check edge - edge
-    if (affA.dim == 1 && affB.dim == 1) return { 
-        closestPointToLine(affA.u0 ? a0 : a1, a2, affB.u0 ? b0 : b1, b2), 
-        closestPointToLine(affB.u0 ? b0 : b1, b2, affA.u0 ? a0 : a1, a2) 
-    };
+    if (affA.dim == 1 && affB.dim == 1) return closestPointBetweenLines(affB.u0 ? a0 : a1, a2, affB.u0 ? b0 : b1, b2);
 
     std::vector<vec3> pts;
 
