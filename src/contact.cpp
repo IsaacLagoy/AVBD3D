@@ -19,6 +19,8 @@ std::pair<vec3, vec3> projectbcs(const SupportPoint& sp0, const SupportPoint& sp
 std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB) {
     const Face& face = polytope->front();
 
+    print("barycentric fallback");
+
     // rename data
     const SupportPoint& sp0 = *face.sps[0];
     const SupportPoint& sp1 = *face.sps[1];
@@ -125,21 +127,21 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
 // vertex to edge (0, 1)
 // vertex to vertex (0, 0)
 
-struct affline {
+struct affine {
     int dim = 0;
     bool u0 = false;
     bool u1 = false;
     bool u2 = false;
 
-    affline() = default;
+    affine() = default;
 };
 
-affline getAffine(const std::array<const SupportPoint*, 3>& sps, bool isA) {
+affine getAffine(const std::array<const SupportPoint*, 3>& sps, bool isA) {
     // rename data
     int sp0 = isA ? sps[0]->indexA : sps[0]->indexB;
     int sp1 = isA ? sps[1]->indexA : sps[1]->indexB;
     int sp2 = isA ? sps[2]->indexA : sps[2]->indexB;
-    affline a;
+    affine a;
 
     // find uniqueness
     a.u0 = sp0 != sp1 && sp0 != sp2;
@@ -180,35 +182,36 @@ vec3 closestPointOnLine(const vec3& u0, const vec3& u1, const vec3& v) {
     return u0 + t * ab;
 }
 
-// may need to be barycentric
-vec3 closestPointOnFace(const vec3& a, const vec3& b, const vec3& c, const vec3& p) {
-    // shouldn't be collinear
-    vec3 n = glm::cross(b - a, c - a);
-    float t = (glm::dot(n, p) - glm::length(n)) / glm::dot(n, n);
+vec3 closestPointOnPlane(const vec3& a, const vec3& b, const vec3& c, const vec3& p) {
+    vec3 n = glm::normalize(glm::cross(b - a, c - a));
+    float t = glm::dot(n, p - a); // signed distance from p to plane
     return p - t * n;
 }
+
 
 std::pair<vec3, vec3> closestPointBetweenLines(const vec3& u0, const vec3& u1, const vec3& v0, const vec3& v1) {
     // we are assuming that lines are not degenerate
     vec3 d1 = u1 - u0;
     vec3 d2 = v1 - v0;
     vec3 r  = u0 - v0;
+
     float a = glm::dot(d1, d1);
     float e = glm::dot(d2, d2);
     float f = glm::dot(d2, r);
-
-    // general nondegenerate case
     float c = glm::dot(d1, r);
     float b = glm::dot(d1, d2);
+
+    float s = 0.0f;
+    float t = 0.0f;
+
     float denom = a * e - b * b;
 
     // if segments are not parallel, compute the closest point on L1 to L2 and clamp to segment S1. Else pick arbitrary s (here 0)
-    float s;
-    if (denom != 0) s = glm::clamp((b * f - c * e) / denom, 0.0f, 1.0f);
+    if (fabs(denom) > 1e-8f) s = glm::clamp((b * f - c * e) / denom, 0.0f, 1.0f);
     else s = 0.0f;
 
     // copmute point on L2 closest to S1(s)
-    float t = (b * s + f) / e;
+    t = (b * s + f) / e;
 
     if (t < 0.0f) {
         t = 0.0f;
@@ -224,15 +227,171 @@ std::pair<vec3, vec3> closestPointBetweenLines(const vec3& u0, const vec3& u1, c
 }
 
 // these need to be projected to 2d
+void get2dBasis(vec3& u, vec3& v, const vec3& a, const vec3& b, const vec3& c) {
+    // assume non-collinear
+    u = glm::normalize(b - a);
+    v = glm::normalize(c - a);
+}
+
+vec2 project2d(const vec3& u, const vec3& v, const vec3& a, const vec3& p) {
+    vec3 delta = a - p;
+    return { glm::dot(delta, u), glm::dot(delta, v) };
+}
+
+vec3 project3d(const vec3& u, const vec3& v, const vec3& a, const vec2& p) {
+    return a + p.x * u + p.y * v;
+}
+
+float cross(const vec2& r, const vec2& s) {
+    return r.x * s.y - r.y * s.x;
+}
+
+bool isInsideEdge2d(const vec2& c0, const vec2& c1, const vec2& p) {
+    return cross(c1 - c0, p - c0) >= 0;
+}
+
+void orderTriangle2d(std::vector<vec2>& vecs) {
+    float signedArea = 0;
+    for (int i = 0; i < vecs.size(); i++) {
+        vec2 p0 = vecs[i];
+        vec2 p1 = vecs[(i + 1) % vecs.size()];
+        signedArea += (p0.x * p1.y - p1.x * p0.y);
+    }
+    if (signedArea < 0) {
+        // Clockwise → reverse order
+        std::reverse(vecs.begin(), vecs.end());
+    }
+}
+
+std::optional<vec2> segmentIntersect2d(const vec2& p0, const vec2& p1, const vec2& q0, const vec2& q1) {
+    vec2 r = p1 - p0;
+    vec2 s = q1 - q0;
+
+    float denom = cross(r, s);
+    if (denom == 0) return std::nullopt;
+
+    float t = cross(q0 - p0, s) / denom;
+    float u = cross(q0 - p0, r) / denom;
+
+    if (0 <= t && t <= 1 && 0 <= u && u <= 1) return p0 + t * r;
+    return std::nullopt;
+}
+
+bool pointIsInTriangle2d(const vec2& p, const vec2& a, const vec2& b, const vec2& c) {
+    // assume non degenerate triangle
+    vec2 v0 = c - a;
+    vec2 v1 = b - a;
+    vec2 v2 = p - a;
+
+    float dot00 = glm::dot(v0, v0);
+    float dot01 = glm::dot(v0, v1);
+    float dot02 = glm::dot(v0, v2);
+    float dot11 = glm::dot(v1, v1);
+    float dot12 = glm::dot(v1, v2);
+
+    float denom = dot00 * dot11 - dot01 * dot01;
+
+    // debug just in case
+    if (denom == 0) throw std::runtime_error("pointIsInTriangle2d denom = 0");
+
+    float u = (dot11 * dot02 - dot01 * dot12) / denom;
+    float v = (dot00 * dot12 - dot01 * dot02) / denom;
+
+    return u >= 0 && v >= 0 && u + v <= 1;
+}
 
 // line segment to triangle
 void closestPointToFace(std::vector<vec3>& pts, const vec3& v0, const vec3& v1, const vec3& a, const vec3& b, const vec3& c) {
-    
+    vec3 u, v;
+    get2dBasis(u, v, a, b, c);
+
+    vec3 normal = glm::normalize(glm::cross(b - a, c - a));
+
+    // project endpoints onto plane
+    vec3 p0 = projectPointToPlane(v0, normal, a);
+    vec3 p1 = projectPointToPlane(v1, normal, a);
+
+    // convert points to 2d
+    vec2 l0 = project2d(u, v, a, p0);
+    vec2 l1 = project2d(u, v, a, p1);
+    vec2 t0 = project2d(u, v, a, a);
+    vec2 t1 = project2d(u, v, a, b);
+    vec2 t2 = project2d(u, v, a, c);
+
+    // perform line - triangle intersection 2d
+    bool l0IsInside = pointIsInTriangle2d(l0, t0, t1, t2);
+    bool l1IsInside = pointIsInTriangle2d(l1, t0, t1, t2);
+
+    if (l0IsInside) pts.push_back(project3d(u, v, a, l0));
+    if (l1IsInside) pts.push_back(project3d(u, v, a, l1));
+
+    if (l0IsInside && l1IsInside) return;
+
+    // check all edges
+    std::optional<vec2> intersect;
+
+    intersect = segmentIntersect2d(l0, l1, t0, t1);
+    if (intersect.has_value()) pts.push_back(project3d(u, v, a, intersect.value()));
+
+    intersect = segmentIntersect2d(l0, l1, t1, t2);
+    if (intersect.has_value()) pts.push_back(project3d(u, v, a, intersect.value()));
+
+    intersect = segmentIntersect2d(l0, l1, t2, t0);
+    if (intersect.has_value()) pts.push_back(project3d(u, v, a, intersect.value()));
 }
 
 // check for no solution
 void clipFace(std::vector<vec3>& pts, const vec3& a0, const vec3& b0, const vec3& c0, const vec3& a1, const vec3& b1, const vec3& c1) {
+    vec3 u, v;
+    get2dBasis(u, v, a1, b1, c1);
 
+    vec3 normal = glm::normalize(glm::cross(b1 - a1, c1 - a1));
+
+    // project endpoints onto plane
+    vec3 p0 = projectPointToPlane(a0, normal, a1);
+    vec3 p1 = projectPointToPlane(b0, normal, a1);
+    vec3 p2 = projectPointToPlane(c0, normal, a1);
+
+    // convert points to 2d
+    std::vector<vec2> clipper = { project2d(u, v, a1, p0), project2d(u, v, a1, p1), project2d(u, v, a1, p2) };
+    std::vector<vec2> subject = { project2d(u, v, a1, a1), project2d(u, v, a1, b1), project2d(u, v, a1, c1) };
+
+    // order edges
+    orderTriangle2d(clipper);
+    orderTriangle2d(subject);
+
+    // perform triangle - triangle intersection
+    // sutherland-hodgeman
+    std::vector<vec2> output = { subject[0], subject[1], subject[2] };
+    std::vector<vec2> input;
+    for (int c = 0; c < 3; c++) {
+        input = output;
+        output.clear();
+
+        const vec2& e0 = clipper[c];
+        const vec2& e1 = clipper[(c + 1) % 3];
+
+        std::optional<vec2> tv;
+
+        for (int i = 0; i < input.size(); i++) {
+            const vec2& s = input[i];
+            const vec2& p = input[(i + 1) % input.size()];
+
+            if (isInsideEdge2d(e0, e1, p)) {
+                if (!isInsideEdge2d(e0, e1, s)) {
+                    tv = segmentIntersect2d(e0, e1, s, p);
+                    if (tv.has_value()) output.push_back(tv.value());
+                }
+                output.push_back(p);
+            } else if (isInsideEdge2d(e0, e1, s)) {
+                tv = segmentIntersect2d(e0, e1, s, p);
+                if (tv.has_value()) output.push_back(tv.value());
+            }
+        }
+    }
+
+    // convert intersections / inertior points back to 3d
+    for (const vec2& o : output) pts.push_back(project3d(u, v, a1, o));
 }
 
 vec3 avgVecs(const std::vector<vec3>& pts) {
@@ -245,8 +404,13 @@ vec3 avgVecs(const std::vector<vec3>& pts) {
 
 std::pair<vec3, vec3> getContact(Polytope* polytope, Rigid* bodyA, Rigid* bodyB) {
     // determine affine relationships
-    affline affA = getAffine(polytope->front().sps, true);
-    affline affB = getAffine(polytope->front().sps, false);
+    affine affA = getAffine(polytope->front().sps, true);
+    affine affB = getAffine(polytope->front().sps, false);
+
+    print("contect info");
+    print(affA.dim == 0 ? "A vertex" : (affA.dim == 1 ? "A line" : "A face"));
+    print(affB.dim == 0 ? "B vertex" : (affB.dim == 1 ? "B line" : "B face"));
+    print(polytope->front().normal);
 
     // rename data
     const Face& face = polytope->front();
@@ -255,40 +419,42 @@ std::pair<vec3, vec3> getContact(Polytope* polytope, Rigid* bodyA, Rigid* bodyB)
     const SupportPoint& sp1 = *face.sps[1];
     const SupportPoint& sp2 = *face.sps[2];
 
-    const vec3& a0 = Mesh::uniqueVerts[sp0.indexA];
-    const vec3& a1 = Mesh::uniqueVerts[sp1.indexA];
-    const vec3& a2 = Mesh::uniqueVerts[sp2.indexA];
+    const vec3& a0 = transform(Mesh::uniqueVerts[sp0.indexA], bodyA);
+    const vec3& a1 = transform(Mesh::uniqueVerts[sp1.indexA], bodyA);
+    const vec3& a2 = transform(Mesh::uniqueVerts[sp2.indexA], bodyA);
     
-    const vec3& b0 = Mesh::uniqueVerts[sp0.indexB];
-    const vec3& b1 = Mesh::uniqueVerts[sp1.indexB];
-    const vec3& b2 = Mesh::uniqueVerts[sp2.indexB];
+    const vec3& b0 = transform(Mesh::uniqueVerts[sp0.indexB], bodyB);
+    const vec3& b1 = transform(Mesh::uniqueVerts[sp1.indexB], bodyB);
+    const vec3& b2 = transform(Mesh::uniqueVerts[sp2.indexB], bodyB);
 
     // check vertex - vertex
     if (affA.dim == 0 && affB.dim == 0) return { a0, b0 };
 
     // check vertex - edge (b has at least 2 unique vertices)
     if (affA.dim == 0 && affB.dim == 1) return { a0, closestPointOnLine(affB.u0 ? b0 : b1, b2, a0) };
-    if (affA.dim == 1 && affB.dim == 0) return { closestPointOnLine(affB.u0 ? a0 : a1, a2, b0), b0 };
+    if (affA.dim == 1 && affB.dim == 0) return { closestPointOnLine(affA.u0 ? a0 : a1, a2, b0), b0 };
 
     // check vertex - face
-    if (affA.dim == 0 && affB.dim == 2) return { a0, closestPointOnFace(b0, b1, b2, a0) };
-    if (affA.dim == 2 && affB.dim == 0) return { closestPointOnFace(a0, a1, a2, b0), b0 };
+    if (affA.dim == 0 && affB.dim == 2) return { a0, closestPointOnPlane(b0, b1, b2, a0) };
+    if (affA.dim == 2 && affB.dim == 0) return { closestPointOnPlane(a0, a1, a2, b0), b0 };
 
     // check edge - edge
-    if (affA.dim == 1 && affB.dim == 1) return closestPointBetweenLines(affB.u0 ? a0 : a1, a2, affB.u0 ? b0 : b1, b2);
+    if (affA.dim == 1 && affB.dim == 1) return closestPointBetweenLines(affA.u0 ? a0 : a1, a2, affB.u0 ? b0 : b1, b2);
 
     std::vector<vec3> pts;
 
     // check edge - face
     if (affA.dim == 1 && affB.dim == 2) {
         closestPointToFace(pts, affA.u0 ? a0 : a1, a2, b0, b1, b2);
+        if (pts.size() == 0) return barycentric(polytope, bodyA, bodyB);
         vec3 p = avgVecs(pts);
-        return { p, closestPointOnFace(b0, b1, b2, p) };
+        return { p, closestPointOnPlane(b0, b1, b2, p) };
     };
     if (affA.dim == 2 && affB.dim == 1) {
         closestPointToFace(pts, affB.u0 ? b0 : b1, b2, a0, a1, a2);
+        if (pts.size() == 0) return barycentric(polytope, bodyA, bodyB);
         vec3 p = avgVecs(pts);
-        return { closestPointOnFace(a0, a1, a2, p), p };
+        return { closestPointOnPlane(a0, a1, a2, p), p };
     };
 
     // check face - face
@@ -298,5 +464,5 @@ std::pair<vec3, vec3> getContact(Polytope* polytope, Rigid* bodyA, Rigid* bodyB)
     if (pts.size() == 0) return barycentric(polytope, bodyA, bodyB);
 
     vec3 p = avgVecs(pts);
-    return { p, closestPointOnFace(b0, b1, b2, p) };
+    return { p, closestPointOnPlane(b0, b1, b2, p) };
 }

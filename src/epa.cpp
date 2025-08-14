@@ -68,7 +68,7 @@ std::optional<Face> Polytope::buildFace(const SupportPoint* pa, const SupportPoi
     vec3 v = cv - av;
     face.normal = glm::cross(u, v);
 
-    if (glm::length2(face.normal) < 1e-10f) return std::nullopt; // face is degenerate
+    if (glm::length2(face.normal) < 1e-8f) return std::nullopt; // face is degenerate
     face.normal = glm::normalize(face.normal);
 
     face.distance = projectedDistance(face.normal, av);
@@ -99,7 +99,8 @@ bool Polytope::insert(const SupportPoint& spRef) {
     
     // check if point is already in cloud or if it is closer than the face's centroid
     auto it = sps.find(spRef);
-    if (it != sps.end() || projectedDistance(front().normal, spRef.mink) - front().distance < 1e-6f) return true;
+    if (it != sps.end() || projectedDistance(front().normal, spRef.mink) - front().distance < 1e-8f * front().distance)
+        return true;
 
     // insert support point into the sps cloud
     const SupportPoint* sp = add(spRef);
@@ -111,7 +112,7 @@ bool Polytope::insert(const SupportPoint& spRef) {
         const Face& face = *it;
 
         // if face is not facing the new point, continue
-        if (!sameDirection(face.normal, sp->mink - face.sps[0]->mink)) {
+        if (glm::dot(face.normal, sp->mink) <= face.distance + 1e-8f) { // not visible
             ++it;
             continue;
         }

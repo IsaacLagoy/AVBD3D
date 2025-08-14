@@ -30,6 +30,7 @@
 #define DEBUG_LINEAR_PRINT false
 
 // shorthand names
+using vec2 = glm::vec2;
 using vec3 = glm::vec3;
 using vec4 = glm::vec4;
 using mat3x3 = glm::mat3x3;

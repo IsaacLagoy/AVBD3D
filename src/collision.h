@@ -55,7 +55,7 @@ struct Face {
 struct Compare {
     // Compare FacePtrs
     bool operator()(const Face& a, const Face& b) const {
-        return a.distance > b.distance;
+        return a.distance < b.distance;
     }
 };
 

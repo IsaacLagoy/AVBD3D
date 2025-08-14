@@ -1,12 +1,12 @@
 #include "solver.h"
 
 Rigid::Rigid(Solver* solver, vec3 size, float density, float friction,
-             vec3 position, vec6 velocity, vec4 color)
+             vec3 position, quat rotation, vec6 velocity, vec4 color)
     :   solver(solver), 
         forces(nullptr), 
         next(nullptr),
         position(position), 
-        rotation(glm::quat(1, 0, 0, 0)),
+        rotation(glm::normalize(rotation)),
         velocity(velocity), 
         prevVelocity(velocity),
         initialPosition(),

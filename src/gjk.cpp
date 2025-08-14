@@ -42,7 +42,7 @@ bool handleSimplex(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir) {
 }
 
 bool simplex0(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir) {
-    dir = bodyB->position - bodyA->position;
+    dir = bodyA->position - bodyB->position;
     if (glm::length2(dir) < 1e-6f) dir = vec3(0, 1, 0);
     return false;
 }

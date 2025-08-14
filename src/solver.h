@@ -45,7 +45,7 @@ struct Rigid {
     // visual attributes
     vec4 color;
 
-    Rigid(Solver* solver, vec3 size, float density, float friction, vec3 position,
+    Rigid(Solver* solver, vec3 size, float density, float friction, vec3 position, quat rotation = quat(1, 0, 0, 0),
           vec6 velocity = vec6(), vec4 color = vec4(0.8, 0.8, 0.8, 0.5));
     ~Rigid();
 
@@ -132,6 +132,9 @@ struct Manifold : Force {
         vec6 JAt2, JBt2; // tangent Jacobian rows in the other direction
         vec3 C0; // accumulated positional error (n, t1, t2)
         bool stick; // static vs dynamic friction
+
+        vec3 CA[3];
+        vec3 CB[3];
     }; 
 
     Contact contacts[4];
@@ -291,9 +294,11 @@ struct Mesh {
 
 // helper functions
 mat4x4 buildModelMatrix(const Rigid* b);
+mat4x4 buildInverseModelMatrix(const Rigid* b);
 mat4x4 buildModelMatrix(const vec3& pos, const vec3& sca, const quat& rot);
 vec3 transform(const vec3& vertex, Rigid* body);
 vec3 transform(int index, Rigid* body);
+vec3 inverseTransform(const glm::vec3& worldPoint, Rigid* body);
 
 vec3 rotate(const vec3& vertex, Rigid* body);
 vec3 rotate(int index, Rigid* body);

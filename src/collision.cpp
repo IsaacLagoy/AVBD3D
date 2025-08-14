@@ -23,22 +23,14 @@ vec3 rotate(int index, Rigid* body) {
 
 int bestDot(Rigid* body, const vec3& dir) {
     // transform dir to model space
-    if (DEBUG_PRINT_GJK) print("dir best Dot");
-    if (DEBUG_PRINT_GJK) print(dir);
-    vec3 inv = glm::normalize(glm::inverse(body->rotation)) * dir;
-    if (DEBUG_PRINT_GJK) print("inv");
-    if (DEBUG_PRINT_GJK) print(body->rotation);
-    if (DEBUG_PRINT_GJK) print(inv);
+    vec3 inv = glm::inverse(body->rotation) * dir;
     return Mesh::bestDot(inv);
 }
 
 SupportPoint getSupportPoint(Rigid* bodyA, Rigid* bodyB, const vec3& dir) {
-
-    if (DEBUG_PRINT_GJK) print("BestDot A");
-    int indexA = bestDot(bodyA, dir);
-    if (DEBUG_PRINT_GJK) print("Best dot B");
-    int indexB = bestDot(bodyB, -dir);
-    return { indexA, indexB, transform(indexA, bodyA) - transform(indexB, bodyB) };
+    int indexA = bestDot(bodyA, -dir);
+    int indexB = bestDot(bodyB, dir);
+    return { indexA, indexB, transform(indexB, bodyB) - transform(indexA, bodyA) };
 }
 
 // Main
@@ -76,16 +68,23 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     contacts[0].normal = polytope->front().normal;
     contacts[0].depth = polytope->front().distance;
 
-    std::pair<vec3, vec3> rs = barycentric(polytope, bodyA, bodyB);
-    // std::pair<vec3, vec3> rs = getContact(polytope, bodyA, bodyB);
+    // add mink points to contact
+    for (int i = 0; i < 3; i++) {
+        contacts[0].CA[i] = Mesh::uniqueVerts[polytope->front().sps[i]->indexA];
+        contacts[0].CB[i] = Mesh::uniqueVerts[polytope->front().sps[i]->indexB];
+    }
 
-    contacts[0].rA = rs.first;
-    contacts[0].rB = rs.second;
+    std::pair<vec3, vec3> rs = getContact(polytope, bodyA, bodyB);
 
-    // print("contacts");
-    // print(contacts[0].rA);
-    // print(contacts[0].rB);
-    // print(contacts[0].normal);
+    contacts[0].rA = inverseTransform(rs.first, bodyA);
+    contacts[0].rB = inverseTransform(rs.second, bodyB);
+
+    bodyA->color = vec4(1, 0, 0, 1);
+    bodyB->color = vec4(0, 0, 1, 1);
+
+    print("model space contacts");
+    print(rs.first);
+    print(rs.second);
 
     delete polytope;
     return 1;

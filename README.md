@@ -20,13 +20,22 @@ To build:
 ```bash
 mkdir build
 cd build
-cmake -DUSE_WAYLAND=OFF ..
+cmake ..
 cmake --build .
 ```
 
 To run:
 ```
 ./render
+```
+
+### Building on Linux Wayland
+
+```bash
+mkdir build
+cd build
+cmake -DUSE_WAYLAND=ON ..
+cmake --build .
 ```
 
 ## About This Version
