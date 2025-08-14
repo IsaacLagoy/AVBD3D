@@ -19,7 +19,7 @@ std::pair<vec3, vec3> projectbcs(const SupportPoint& sp0, const SupportPoint& sp
 std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB) {
     const Face& face = polytope->front();
 
-    print("barycentric fallback");
+    if (DEBUG_PRINT_GJK) print("barycentric fallback");
 
     // rename data
     const SupportPoint& sp0 = *face.sps[0];

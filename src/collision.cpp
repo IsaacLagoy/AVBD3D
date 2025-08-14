@@ -68,12 +68,6 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     contacts[0].normal = polytope->front().normal;
     contacts[0].depth = polytope->front().distance;
 
-    // add mink points to contact
-    for (int i = 0; i < 3; i++) {
-        contacts[0].CA[i] = Mesh::uniqueVerts[polytope->front().sps[i]->indexA];
-        contacts[0].CB[i] = Mesh::uniqueVerts[polytope->front().sps[i]->indexB];
-    }
-
     std::pair<vec3, vec3> rs = getContact(polytope, bodyA, bodyB);
 
     contacts[0].rA = inverseTransform(rs.first, bodyA);
@@ -89,7 +83,7 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     // ensure normal is facing the correct direction
     if (glm::dot(contacts[0].normal, bodyA->position - bodyB->position) < 0) {
         contacts[0].normal *= -1;
-        print("flipping normal");
+        if (DEBUG_PRINT_GJK) print("flipping normal");
     }
 
     delete polytope;

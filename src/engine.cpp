@@ -154,20 +154,20 @@ void Engine::render() {
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
         // project all minkowski points
-        for (int i = 0; i < 3; i++) {
-            vec3 rA = transform(man->contacts[0].CA[i], man->bodyA);
-            vec3 rB = transform(man->contacts[0].CB[i], man->bodyB);
+        // for (int i = 0; i < 3; i++) {
+        //     vec3 rA = transform(man->contacts[0].face.sps[i]->indexA, man->bodyA);
+        //     vec3 rB = transform(man->contacts[0].face.sps[i]->indexB, man->bodyB);
 
-            model = buildModelMatrix(rA, vec3(0.05f), quat(1, 0, 0, 0));
-            shader->setMat4("model", model);
-            shader->setVec3("objectColor", vec4(1, 0, 0, 1));
-            glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+        //     model = buildModelMatrix(rA, vec3(0.05f), quat(1, 0, 0, 0));
+        //     shader->setMat4("model", model);
+        //     shader->setVec3("objectColor", vec4(1, 0, 0, 1));
+        //     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
-            model = buildModelMatrix(rB, vec3(0.05f), quat(1, 0, 0, 0));
-            shader->setMat4("model", model);
-            shader->setVec3("objectColor", vec4(0, 0, 1, 1));
-            glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-        }
+        //     model = buildModelMatrix(rB, vec3(0.05f), quat(1, 0, 0, 0));
+        //     shader->setMat4("model", model);
+        //     shader->setVec3("objectColor", vec4(0, 0, 1, 1));
+        //     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+        // }
 
         // connect the two contact points
         vec3 dir = rB - rA;

@@ -29,10 +29,6 @@ struct SupportPointEqual {
     }
 };
 
-// simplex
-using Simplex = UnorderedArray<SupportPoint, 4>;
-enum Index { A, B, C, D };
-
 // edge
 using Edge = std::pair<const SupportPoint*, const SupportPoint*>;
 
@@ -51,6 +47,10 @@ struct Face {
         edge = { sps[i % 3], sps[(i + 1) % 3] }; 
     }
 };
+
+// simplex
+using Simplex = UnorderedArray<SupportPoint, 4>;
+enum Index { A, B, C, D };
 
 struct Compare {
     // Compare FacePtrs

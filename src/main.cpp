@@ -21,7 +21,7 @@ int main() {
     new Rigid(&solver, {5, 0.25f, 5}, -1.0f, 0.5f, {0, -1.0f, 0});
 
     // scale = vec3(uniform(0.5f, 3.0f), uniform(0.5f, 3.0f), uniform(0.5f, 3.0f))
-    for (int i = 0; i < 1; ++i) {
+    for (int i = 0; i < 10; ++i) {
         new Rigid(&solver, vec3(0.5f), 1.0f, 0.4f, vec3(0.0f, 0.1f, 0.0f) + vec3(uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff)), quat(uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff)), vec6());
     }
 
@@ -36,7 +36,7 @@ int main() {
         std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
         std::chrono::duration<float> dt = currentTime - lastFrameTime;
 
-        solver.step(dt.count() / 10);
+        solver.step(dt.count() / 100);
         engine.render();
         engine.update();
 

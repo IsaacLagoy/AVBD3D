@@ -17,11 +17,13 @@ bool Manifold::initialize() {
 
     // TODO store previous contact state
 
+
     // Compute new contacts
     numContacts = collide(bodyA, bodyB, contacts);
     if (numContacts == 0) return false;
 
     // TODO Merge old contact data with new contacts
+    
 
     // initialize contact data
     for (int i = 0; i < numContacts; i++) {
@@ -56,9 +58,6 @@ bool Manifold::initialize() {
 
 void Manifold::computeConstraint(float alpha) {
     // compute positional changes
-    // vec6 dA = bodyA->getConfiguration() - bodyA->initial;
-    // vec6 dB = bodyB->getConfiguration() - bodyB->initial;
-
     for (int i = 0; i < numContacts; i++) {
         // --- Simple, Direct Constraint Calculation ---
         // Goal: C = 0 when objects are just touching, C < 0 when penetrating
@@ -72,10 +71,6 @@ void Manifold::computeConstraint(float alpha) {
         C[i * 3 + 0] = contact.C0.x * (1 - alpha) + dot(contact.JAn,  dpA) + dot(contact.JBn,  dpB);
         C[i * 3 + 1] = contact.C0.y * (1 - alpha) + dot(contact.JAt1, dpA) + dot(contact.JBt1, dpB);
         C[i * 3 + 2] = contact.C0.z * (1 - alpha) + dot(contact.JAt2, dpA) + dot(contact.JBt2, dpB);
-
-        // // normal C
-        // print("normal C");
-        // print(C[i * 3 + 0]);
 
         // --- Update Force Limits for Friction Cone ---
         float frictionBound = abs(lambda[i * 3 + 0]) * friction;
