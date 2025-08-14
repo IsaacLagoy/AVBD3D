@@ -8,10 +8,10 @@ vec3 projectPointToPlane(const vec3& point, const vec3& normal, const vec3& plan
     return point - proj;
 }
 
-std::pair<vec3, vec3> projectbcs(const SupportPoint& sp0, const SupportPoint& sp1, const SupportPoint& sp2, const vec3& bcs) {
+std::pair<vec3, vec3> projectbcs(const SupportPoint& sp0, const SupportPoint& sp1, const SupportPoint& sp2, const vec3& bcs, Rigid* bodyA, Rigid* bodyB) {
     // interpolate points and bodyA and bodyB in model space
-    vec3 PA = bcs[0] * Mesh::uniqueVerts[sp0.indexA] + bcs[1] * Mesh::uniqueVerts[sp1.indexA] + bcs[2] * Mesh::uniqueVerts[sp2.indexA];
-    vec3 PB = bcs[0] * Mesh::uniqueVerts[sp0.indexB] + bcs[1] * Mesh::uniqueVerts[sp1.indexB] + bcs[2] * Mesh::uniqueVerts[sp2.indexB];
+    vec3 PA = bcs[0] * transform(Mesh::uniqueVerts[sp0.indexA], bodyA) + bcs[1] * transform(Mesh::uniqueVerts[sp1.indexA], bodyA) + bcs[2] * transform(Mesh::uniqueVerts[sp2.indexA], bodyA);
+    vec3 PB = bcs[0] * transform(Mesh::uniqueVerts[sp0.indexB], bodyB) + bcs[1] * transform(Mesh::uniqueVerts[sp1.indexB], bodyB) + bcs[2] * transform(Mesh::uniqueVerts[sp2.indexB], bodyB);
 
     return { PA, PB };
 }
@@ -53,13 +53,13 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
 
     // --- Vertex regions ---
     if (d1 <= eps && d2 <= eps) {
-        return projectbcs(sp0, sp1, sp2, {1.0f, 0.0f, 0.0f});
+        return projectbcs(sp0, sp1, sp2, {1.0f, 0.0f, 0.0f}, bodyA, bodyB);
     }
     if (d3 >= -eps && d4 <= eps) {
-        return projectbcs(sp0, sp1, sp2, {0.0f, 1.0f, 0.0f});
+        return projectbcs(sp0, sp1, sp2, {0.0f, 1.0f, 0.0f}, bodyA, bodyB);
     }
     if (d6 >= -eps && d5 <= eps) {
-        return projectbcs(sp0, sp1, sp2, {0.0f, 0.0f, 1.0f});
+        return projectbcs(sp0, sp1, sp2, {0.0f, 0.0f, 1.0f}, bodyA, bodyB);
     }
 
     // --- Edge AB region ---
@@ -68,7 +68,7 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
         float denom = d1 - d3;
         float t = (fabs(denom) > eps) ? d1 / denom : 0.0f;
         t = glm::clamp(t, 0.0f, 1.0f);
-        return projectbcs(sp0, sp1, sp2, {1.0f - t, t, 0.0f});
+        return projectbcs(sp0, sp1, sp2, {1.0f - t, t, 0.0f}, bodyA, bodyB);
     }
 
     // --- Edge AC region ---
@@ -77,7 +77,7 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
         float denom = d2 - d6;
         float t = (fabs(denom) > eps) ? d2 / denom : 0.0f;
         t = glm::clamp(t, 0.0f, 1.0f);
-        return projectbcs(sp0, sp1, sp2, {1.0f - t, 0.0f, t});
+        return projectbcs(sp0, sp1, sp2, {1.0f - t, 0.0f, t}, bodyA, bodyB);
     }
 
     // --- Edge BC region ---
@@ -86,7 +86,7 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
         float denom = (d4 - d3) + (d5 - d6);
         float t = (fabs(denom) > eps) ? (d4 - d3) / denom : 0.0f;
         t = glm::clamp(t, 0.0f, 1.0f);
-        return projectbcs(sp0, sp1, sp2, {0.0f, 1.0f - t, t});
+        return projectbcs(sp0, sp1, sp2, {0.0f, 1.0f - t, t}, bodyA, bodyB);
     }
 
     // --- Face region ---
@@ -108,14 +108,14 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
     float denomFace = d00 * d11 - d01 * d01;
     if (fabs(denomFace) < eps) {
         // Degenerate face — fallback to vertex A
-        return projectbcs(sp0, sp1, sp2, {1.0f, 0.0f, 0.0f});
+        return projectbcs(sp0, sp1, sp2, {1.0f, 0.0f, 0.0f}, bodyA, bodyB);
     }
 
     float beta  = (d11 * d20 - d01 * d21) / denomFace;
     float gamma = (d00 * d21 - d01 * d20) / denomFace;
     float alpha = 1.0f - beta - gamma;
 
-    return projectbcs(sp0, sp1, sp2, {alpha, beta, gamma});
+    return projectbcs(sp0, sp1, sp2, {alpha, beta, gamma}, bodyA, bodyB);
 
 }
 
@@ -407,10 +407,10 @@ std::pair<vec3, vec3> getContact(Polytope* polytope, Rigid* bodyA, Rigid* bodyB)
     affine affA = getAffine(polytope->front().sps, true);
     affine affB = getAffine(polytope->front().sps, false);
 
-    print("contect info");
-    print(affA.dim == 0 ? "A vertex" : (affA.dim == 1 ? "A line" : "A face"));
-    print(affB.dim == 0 ? "B vertex" : (affB.dim == 1 ? "B line" : "B face"));
-    print(polytope->front().normal);
+    // print("contect info");
+    // print(affA.dim == 0 ? "A vertex" : (affA.dim == 1 ? "A line" : "A face"));
+    // print(affB.dim == 0 ? "B vertex" : (affB.dim == 1 ? "B line" : "B face"));
+    // print(polytope->front().normal);
 
     // rename data
     const Face& face = polytope->front();

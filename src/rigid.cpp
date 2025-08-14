@@ -56,8 +56,6 @@ bool Rigid::constrainedTo(Rigid* other) const {
     return false;
 }
 
-void Rigid::draw() {}
-
 mat6x6 Rigid::getMassMatrix() const {
     mat3x3 topLeft = mass * glm::mat3x3(1.0f);
     mat3x3 bottomRight = getInertiaTensor();

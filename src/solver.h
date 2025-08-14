@@ -50,7 +50,6 @@ struct Rigid {
     ~Rigid();
 
     bool constrainedTo(Rigid* other) const;
-    void draw();
 
     mat3x3 getInertiaTensor() const;
     mat6x6 getMassMatrix() const;
@@ -90,7 +89,6 @@ struct Force {
     virtual bool initialize() = 0; // called once when added to solver
     virtual void computeConstraint(float alpha) = 0; // C and limits per row
     virtual void computeDerivatives(Rigid* body) = 0; // J and H per body
-    virtual void draw() const {};
 };
 
 // ball-and-socket joint
@@ -104,7 +102,6 @@ struct Joint : Force {
     bool initialize() override;
     void computeConstraint(float alpha) override;
     void computeDerivatives(Rigid* body) override;
-    void draw() const override;
 };
 
 // no-op force used to ignore collision between two bodies
@@ -115,7 +112,6 @@ struct IgnoreCollision : Force {
     bool initialize() override { return true; }
     void computeConstraint(float alpha) override {}
     void computeDerivatives(Rigid* body) override {}
-    void draw() const override {}
 };
 
 struct Manifold : Force {
@@ -149,7 +145,6 @@ struct Manifold : Force {
     bool initialize() override;
     void computeConstraint(float alpha) override;
     void computeDerivatives(Rigid* body) override;
-    void draw() const override;
 
     static int collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts);
 };
@@ -174,7 +169,6 @@ struct Solver {
     void clear();
     void defaultParams();
     void step(float dt);
-    void draw();
 };
 
 struct Mesh {
@@ -300,8 +294,8 @@ vec3 transform(const vec3& vertex, Rigid* body);
 vec3 transform(int index, Rigid* body);
 vec3 inverseTransform(const glm::vec3& worldPoint, Rigid* body);
 
-vec3 rotate(const vec3& vertex, Rigid* body);
-vec3 rotate(int index, Rigid* body);
+vec3 rotateNScale(const vec3& vertex, Rigid* body);
+vec3 rotateNScale(int index, Rigid* body);
 
 // linear algebra
 vec6 solve(const mat6x6& lhs, const vec6& rhs);

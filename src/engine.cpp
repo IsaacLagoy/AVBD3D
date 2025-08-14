@@ -113,11 +113,10 @@ void Engine::render() {
 
     // Bind the VAO
     glBindVertexArray(VAO);
-
     glm::mat4 model;
 
     // render wire frame for visibility
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     // Iterate through all rigid bodies in the physics engine and render them
     for (Rigid* rigid = bodies; rigid != 0; rigid = rigid->next) {
         // Calculate the model matrix for the current rigid body
@@ -142,11 +141,13 @@ void Engine::render() {
         vec3 rA = transform(man->contacts[0].rA, man->bodyA);
         vec3 rB = transform(man->contacts[0].rB, man->bodyB);
 
+        // graph rA
         model = buildModelMatrix(rA, vec3(0.1f), quat(1, 0, 0, 0));
         shader->setMat4("model", model);
         shader->setVec3("objectColor", vec4(1, 0, 0, 1));
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
+        // graph rB
         model = buildModelMatrix(rB, vec3(0.1f), quat(1, 0, 0, 0));
         shader->setMat4("model", model);
         shader->setVec3("objectColor", vec4(0, 0, 1, 1));
@@ -185,12 +186,18 @@ void Engine::render() {
         look = glm::quatLookAt(n, up);
 
         vec3 lineCenter = (man->bodyA->position + man->bodyB->position) / 2.0f;  // center of the line
-        float length = 5.0f;                     // desired visual length
+        float length = 2.0f;                     // desired visual length
         model = buildModelMatrix(lineCenter, vec3(0.02f, 0.02f, length), look);
         shader->setMat4("model", model);
         shader->setVec3("objectColor", vec4(0,1,0,1));
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
+        // put normal tip
+        vec3 tipCenter = (man->bodyA->position + man->bodyB->position) / 2.0f + n;
+        model = buildModelMatrix(tipCenter, vec3(0.1f), quat(1, 0, 0, 0));
+        shader->setMat4("model", model);
+        shader->setVec3("objectColor", vec4(0,1,0,1));
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
     }
 }
 

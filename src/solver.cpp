@@ -65,11 +65,11 @@ void Solver::step(float dt) {
             for (int i = 0; i < force->rows(); i++) {
                 // warmstart the dual variables and penalty parameters (Eq. 19)
                 // penalty is safely clamped to a minimum and maximum value
-                force->lambda[i] *= alpha * gamma;
+                force->lambda[i] = force->lambda[i] * alpha * gamma;
                 force->penalty[i] = glm::clamp(force->penalty[i] * gamma, PENALTY_MIN, PENALTY_MAX);
 
                 // if it's not a hard constraint, we don't let the penalty exceed material stiffness
-                force->penalty[i] = glm::min(force->penalty[i], force->stiffness[i] == 0 ? INFINITY : force->stiffness[i]);
+                force->penalty[i] = glm::min(force->penalty[i], force->stiffness[i]);
             }
             force = force->next;
         }
@@ -132,7 +132,7 @@ void Solver::step(float dt) {
                     // accumulate force (eq. 13) and hessian (eq. 17)
                     rhs += force->J[i] * f;
                     lhs += outer(force->J[i], force->J[i] * force->penalty[i]);
-                    lhs.addBottomRight(G);
+                    // lhs.addBottomRight(G);
                 }
             }
 
@@ -161,7 +161,7 @@ void Solver::step(float dt) {
 
                 // Update the penalty parameter and clamp to material stiffness if we are within the force bounds (Eq. 16)
                 if (force->lambda[i] > force->fmin[i] && force->lambda[i] < force->fmax[i])
-                    force->penalty[i] = glm::min(force->penalty[i] + beta * abs(force->C[i]), PENALTY_MAX);
+                    force->penalty[i] = glm::min(force->penalty[i] + beta * abs(force->C[i]), glm::min(PENALTY_MAX, force->stiffness[i]));
             }
         }
     }

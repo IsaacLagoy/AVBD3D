@@ -21,19 +21,15 @@ bool Manifold::initialize() {
     numContacts = collide(bodyA, bodyB, contacts);
     if (numContacts == 0) return false;
 
-    // Set stiffness to FLT_MAX for hard constraints (normal and friction)
-    for (int i = 0; i < rows(); ++i) {
-        stiffness[i] = INFINITY;
-    }
-
     // TODO Merge old contact data with new contacts
 
     // initialize contact data
     for (int i = 0; i < numContacts; i++) {
         Contact& contact = contacts[i];
 
-        vec3 wA = transform(contact.rA, bodyA);
-        vec3 wB = transform(contact.rB, bodyB);
+        // TODO check if scale needs to be added here
+        vec3 wA = rotateNScale(contact.rA, bodyA);
+        vec3 wB = rotateNScale(contact.rB, bodyB);
 
         // compute tangent data
         vec3 linIndep = fabs(glm::dot(contact.normal, vec3(0, 1, 0))) > 0.95 ? vec3(1, 0, 0) : vec3(0, 1, 0);
@@ -50,7 +46,7 @@ bool Manifold::initialize() {
         contact.JBt1 = vec6(-1.0f * contact.t1    , -1.0f * glm::cross(wB, contact.t1)    );
         contact.JBt2 = vec6(-1.0f * contact.t2    , -1.0f * glm::cross(wB, contact.t2)    );
 
-        mat3x3 orthonormalBasis = glm::transpose(mat3x3(contact.t1, contact.t2, contact.normal));
+        mat3x3 orthonormalBasis = mat3x3(contact.t1, contact.t2, contact.normal);
 
         contact.C0 = orthonormalBasis * (bodyA->position + wA - bodyB->position - wB); // TODO add collision margin
     }
@@ -73,9 +69,13 @@ void Manifold::computeConstraint(float alpha) {
 
         // When C < 0, objects are too close (violating constraint)
         // When C >= 0, objects are properly separated (satisfying constraint)
-        C[i * 3 + 0] = contact.C0[0] * (1 - alpha) + dot(contact.JAn,  dpA) + dot(contact.JBn,  dpB);
-        C[i * 3 + 1] = contact.C0[1] * (1 - alpha) + dot(contact.JAt1, dpA) + dot(contact.JBt1, dpB);
-        C[i * 3 + 2] = contact.C0[2] * (1 - alpha) + dot(contact.JAt2, dpA) + dot(contact.JBt2, dpB);
+        C[i * 3 + 0] = contact.C0.x * (1 - alpha) + dot(contact.JAn,  dpA) + dot(contact.JBn,  dpB);
+        C[i * 3 + 1] = contact.C0.y * (1 - alpha) + dot(contact.JAt1, dpA) + dot(contact.JBt1, dpB);
+        C[i * 3 + 2] = contact.C0.z * (1 - alpha) + dot(contact.JAt2, dpA) + dot(contact.JBt2, dpB);
+
+        // // normal C
+        // print("normal C");
+        // print(C[i * 3 + 0]);
 
         // --- Update Force Limits for Friction Cone ---
         float frictionBound = abs(lambda[i * 3 + 0]) * friction;
@@ -102,5 +102,3 @@ void Manifold::computeDerivatives(Rigid* body) {
         J[i * 3 + 2] = isA ? contact.JAt2 : contact.JBt2;
     }
 }
-
-void Manifold::draw() const {}
