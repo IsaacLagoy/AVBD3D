@@ -18,6 +18,66 @@ struct Manifold;
 struct Solver;
 struct Mesh;
 
+// support point
+struct SupportPoint {
+    int indexA = 0;
+    int indexB = 0;
+    vec3 mink = vec3(); // position in Minkowski difference space
+
+    // comparison operator for set
+    bool operator<(const SupportPoint& other) const {
+        if (indexA != other.indexA) return indexA < other.indexA;
+        return indexB < other.indexB;
+    }
+
+    SupportPoint() = default;
+};
+
+struct SupportPointHash {
+    size_t operator()(const SupportPoint& sp) const {
+        size_t h1 = std::hash<int>{}(sp.indexA);
+        size_t h2 = std::hash<int>{}(sp.indexB);
+        return h1 ^ (h2 << 1);  // combine hashes
+    }
+};
+
+struct SupportPointEqual {
+    bool operator()(const SupportPoint& a, const SupportPoint& b) const {
+        return a.indexA == b.indexA && a.indexB == b.indexB;
+    }
+};
+
+// edge
+using Edge = std::pair<const SupportPoint*, const SupportPoint*>;
+
+// polytope face
+struct Face {
+    std::array<const SupportPoint*, 3> sps;
+    vec3 normal;
+    float distance;
+
+    bool operator==(const Face& other) const {
+        return sps == other.sps;
+    }
+
+    // overrides edge reference with indexed edge from face
+    void overrideEdge(int i, Edge& edge) const {
+        edge = { sps[i % 3], sps[(i + 1) % 3] }; 
+    }
+};
+
+struct StackFace {
+    std::array<SupportPoint, 3> sps;
+    vec3 normal;
+    float distance;
+
+    StackFace(const Face& face) : sps(), normal(face.normal), distance(face.distance) {
+        for (int i = 0; i < 3; i++) sps[i] = *face.sps[i];
+    }
+
+    StackFace() = default;
+};
+
 // contains data for a single rigid body
 struct Rigid {
     Solver* solver;
@@ -128,7 +188,17 @@ struct Manifold : Force {
         vec6 JAt2, JBt2; // tangent Jacobian rows in the other direction
         vec3 C0; // accumulated positional error (n, t1, t2)
         bool stick; // static vs dynamic friction
-        // TODO store face
+        StackFace face; // saves contact data
+
+        Contact() : rA(), rB(), normal(), depth(0.0), t1(), t2(), JAn(), JBn(), JAt1(), JBt1(), JAt2(), JBt2(), C0(), stick(true), face() {}
+
+        // only considers face indices
+        bool operator==(const Contact& rhs) {
+            for (int i = 0; i < 3; i++) 
+                if (face.sps[i].indexA != rhs.face.sps[i].indexA || face.sps[i].indexB != rhs.face.sps[i].indexB)
+                    return false;
+            return true;
+        }
     }; 
 
     Contact contacts[4];

@@ -8,15 +8,16 @@ vec3 projectPointToPlane(const vec3& point, const vec3& normal, const vec3& plan
     return point - proj;
 }
 
-std::pair<vec3, vec3> projectbcs(const SupportPoint& sp0, const SupportPoint& sp1, const SupportPoint& sp2, const vec3& bcs, Rigid* bodyA, Rigid* bodyB) {
+void projectbcs(const SupportPoint& sp0, const SupportPoint& sp1, const SupportPoint& sp2, const vec3& bcs, Rigid* bodyA, Rigid* bodyB, std::vector<vec3>& rAs, std::vector<vec3>& rBs) {
     // interpolate points and bodyA and bodyB in model space
     vec3 PA = bcs[0] * transform(Mesh::uniqueVerts[sp0.indexA], bodyA) + bcs[1] * transform(Mesh::uniqueVerts[sp1.indexA], bodyA) + bcs[2] * transform(Mesh::uniqueVerts[sp2.indexA], bodyA);
     vec3 PB = bcs[0] * transform(Mesh::uniqueVerts[sp0.indexB], bodyB) + bcs[1] * transform(Mesh::uniqueVerts[sp1.indexB], bodyB) + bcs[2] * transform(Mesh::uniqueVerts[sp2.indexB], bodyB);
 
-    return { PA, PB };
+    rAs.push_back(PA);
+    rBs.push_back(PB);
 }
 
-std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB) {
+void barycentric(std::vector<vec3>& rAs, std::vector<vec3>& rBs, Polytope* polytope, Rigid* bodyA, Rigid* bodyB) {
     const Face& face = polytope->front();
 
     if (DEBUG_PRINT_GJK) print("barycentric fallback");
@@ -53,13 +54,16 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
 
     // --- Vertex regions ---
     if (d1 <= eps && d2 <= eps) {
-        return projectbcs(sp0, sp1, sp2, {1.0f, 0.0f, 0.0f}, bodyA, bodyB);
+        projectbcs(sp0, sp1, sp2, {1.0f, 0.0f, 0.0f}, bodyA, bodyB, rAs, rBs);
+        return;
     }
     if (d3 >= -eps && d4 <= eps) {
-        return projectbcs(sp0, sp1, sp2, {0.0f, 1.0f, 0.0f}, bodyA, bodyB);
+        projectbcs(sp0, sp1, sp2, {0.0f, 1.0f, 0.0f}, bodyA, bodyB, rAs, rBs);
+        return;
     }
     if (d6 >= -eps && d5 <= eps) {
-        return projectbcs(sp0, sp1, sp2, {0.0f, 0.0f, 1.0f}, bodyA, bodyB);
+        projectbcs(sp0, sp1, sp2, {0.0f, 0.0f, 1.0f}, bodyA, bodyB, rAs, rBs);
+        return;
     }
 
     // --- Edge AB region ---
@@ -68,7 +72,8 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
         float denom = d1 - d3;
         float t = (fabs(denom) > eps) ? d1 / denom : 0.0f;
         t = glm::clamp(t, 0.0f, 1.0f);
-        return projectbcs(sp0, sp1, sp2, {1.0f - t, t, 0.0f}, bodyA, bodyB);
+        projectbcs(sp0, sp1, sp2, {1.0f - t, t, 0.0f}, bodyA, bodyB, rAs, rBs);
+        return;
     }
 
     // --- Edge AC region ---
@@ -77,7 +82,8 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
         float denom = d2 - d6;
         float t = (fabs(denom) > eps) ? d2 / denom : 0.0f;
         t = glm::clamp(t, 0.0f, 1.0f);
-        return projectbcs(sp0, sp1, sp2, {1.0f - t, 0.0f, t}, bodyA, bodyB);
+        projectbcs(sp0, sp1, sp2, {1.0f - t, 0.0f, t}, bodyA, bodyB, rAs, rBs);
+        return;
     }
 
     // --- Edge BC region ---
@@ -86,7 +92,8 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
         float denom = (d4 - d3) + (d5 - d6);
         float t = (fabs(denom) > eps) ? (d4 - d3) / denom : 0.0f;
         t = glm::clamp(t, 0.0f, 1.0f);
-        return projectbcs(sp0, sp1, sp2, {0.0f, 1.0f - t, t}, bodyA, bodyB);
+        projectbcs(sp0, sp1, sp2, {0.0f, 1.0f - t, t}, bodyA, bodyB, rAs, rBs);
+        return;
     }
 
     // --- Face region ---
@@ -108,15 +115,15 @@ std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB
     float denomFace = d00 * d11 - d01 * d01;
     if (fabs(denomFace) < eps) {
         // Degenerate face — fallback to vertex A
-        return projectbcs(sp0, sp1, sp2, {1.0f, 0.0f, 0.0f}, bodyA, bodyB);
+        projectbcs(sp0, sp1, sp2, {1.0f, 0.0f, 0.0f}, bodyA, bodyB, rAs, rBs);
+        return;
     }
 
     float beta  = (d11 * d20 - d01 * d21) / denomFace;
     float gamma = (d00 * d21 - d01 * d20) / denomFace;
     float alpha = 1.0f - beta - gamma;
 
-    return projectbcs(sp0, sp1, sp2, {alpha, beta, gamma}, bodyA, bodyB);
-
+    projectbcs(sp0, sp1, sp2, {alpha, beta, gamma}, bodyA, bodyB, rAs, rBs);
 }
 
 // 6 test cases to watch for
@@ -402,15 +409,10 @@ vec3 avgVecs(const std::vector<vec3>& pts) {
     return v / (float) pts.size();
 }
 
-std::pair<vec3, vec3> getContact(Polytope* polytope, Rigid* bodyA, Rigid* bodyB) {
+void getContact(std::vector<vec3>& rAs, std::vector<vec3>& rBs, Polytope* polytope, Rigid* bodyA, Rigid* bodyB) {
     // determine affine relationships
     affine affA = getAffine(polytope->front().sps, true);
     affine affB = getAffine(polytope->front().sps, false);
-
-    // print("contect info");
-    // print(affA.dim == 0 ? "A vertex" : (affA.dim == 1 ? "A line" : "A face"));
-    // print(affB.dim == 0 ? "B vertex" : (affB.dim == 1 ? "B line" : "B face"));
-    // print(polytope->front().normal);
 
     // rename data
     const Face& face = polytope->front();
@@ -428,41 +430,83 @@ std::pair<vec3, vec3> getContact(Polytope* polytope, Rigid* bodyA, Rigid* bodyB)
     const vec3& b2 = transform(Mesh::uniqueVerts[sp2.indexB], bodyB);
 
     // check vertex - vertex
-    if (affA.dim == 0 && affB.dim == 0) return { a0, b0 };
+    if (affA.dim == 0 && affB.dim == 0) {
+        rAs.push_back(a0);
+        rBs.push_back(b0);
+        return;
+    }
 
     // check vertex - edge (b has at least 2 unique vertices)
-    if (affA.dim == 0 && affB.dim == 1) return { a0, closestPointOnLine(affB.u0 ? b0 : b1, b2, a0) };
-    if (affA.dim == 1 && affB.dim == 0) return { closestPointOnLine(affA.u0 ? a0 : a1, a2, b0), b0 };
+    if (affA.dim == 0 && affB.dim == 1) {
+        rAs.push_back(a0);
+        rBs.push_back(closestPointOnLine(affB.u0 ? b0 : b1, b2, a0));
+        return;
+    }
+    if (affA.dim == 1 && affB.dim == 0) {
+        rAs.push_back(closestPointOnLine(affA.u0 ? a0 : a1, a2, b0));
+        rBs.push_back(b0);
+        return; 
+    }
 
     // check vertex - face
-    if (affA.dim == 0 && affB.dim == 2) return { a0, closestPointOnPlane(b0, b1, b2, a0) };
-    if (affA.dim == 2 && affB.dim == 0) return { closestPointOnPlane(a0, a1, a2, b0), b0 };
+    if (affA.dim == 0 && affB.dim == 2) {
+        rAs.push_back(a0);
+        rBs.push_back(closestPointOnPlane(b0, b1, b2, a0));
+        return; 
+    }
+    if (affA.dim == 2 && affB.dim == 0) {
+        rAs.push_back(closestPointOnPlane(a0, a1, a2, b0));
+        rBs.push_back(b0);
+    }
 
     // check edge - edge
-    if (affA.dim == 1 && affB.dim == 1) return closestPointBetweenLines(affA.u0 ? a0 : a1, a2, affB.u0 ? b0 : b1, b2);
+    if (affA.dim == 1 && affB.dim == 1) {
+        std::pair<vec3, vec3> rs = closestPointBetweenLines(affA.u0 ? a0 : a1, a2, affB.u0 ? b0 : b1, b2); 
+        rAs.push_back(rs.first);
+        rBs.push_back(rs.second);
+        return;
+    }
 
     std::vector<vec3> pts;
 
     // check edge - face
     if (affA.dim == 1 && affB.dim == 2) {
         closestPointToFace(pts, affA.u0 ? a0 : a1, a2, b0, b1, b2);
-        if (pts.size() == 0) return barycentric(polytope, bodyA, bodyB);
+        if (pts.size() == 0) {
+            barycentric(rAs, rBs, polytope, bodyA, bodyB);
+            return;
+        }
         vec3 p = avgVecs(pts);
-        return { p, closestPointOnPlane(b0, b1, b2, p) };
+
+        rAs.push_back(p);
+        rBs.push_back(closestPointOnPlane(b0, b1, b2, p));
+        return;
     };
     if (affA.dim == 2 && affB.dim == 1) {
         closestPointToFace(pts, affB.u0 ? b0 : b1, b2, a0, a1, a2);
-        if (pts.size() == 0) return barycentric(polytope, bodyA, bodyB);
+        if (pts.size() == 0) {
+            barycentric(rAs, rBs, polytope, bodyA, bodyB);
+            return;
+        }
         vec3 p = avgVecs(pts);
-        return { closestPointOnPlane(a0, a1, a2, p), p };
+
+        rAs.push_back(closestPointOnPlane(a0, a1, a2, p));
+        rBs.push_back(p);
+        return;
     };
 
     // check face - face
     clipFace(pts, a0, a1, a2, b0, b1, b2);
 
     // fallback to barycentric
-    if (pts.size() == 0) return barycentric(polytope, bodyA, bodyB);
+    if (pts.size() == 0) {
+        barycentric(rAs, rBs, polytope, bodyA, bodyB);
+        return;
+    }
 
     vec3 p = avgVecs(pts);
-    return { p, closestPointOnPlane(b0, b1, b2, p) };
+
+    rAs.push_back(p);
+    rBs.push_back(closestPointOnPlane(b0, b1, b2, p));
+    return;
 }

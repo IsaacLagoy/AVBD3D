@@ -116,7 +116,7 @@ void Engine::render() {
     glm::mat4 model;
 
     // render wire frame for visibility
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     // Iterate through all rigid bodies in the physics engine and render them
     for (Rigid* rigid = bodies; rigid != 0; rigid = rigid->next) {
         // Calculate the model matrix for the current rigid body
@@ -154,20 +154,20 @@ void Engine::render() {
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
         // project all minkowski points
-        // for (int i = 0; i < 3; i++) {
-        //     vec3 rA = transform(man->contacts[0].face.sps[i]->indexA, man->bodyA);
-        //     vec3 rB = transform(man->contacts[0].face.sps[i]->indexB, man->bodyB);
+        for (int i = 0; i < 3; i++) {
+            vec3 rA = transform(man->contacts[0].face.sps[i].indexA, man->bodyA);
+            vec3 rB = transform(man->contacts[0].face.sps[i].indexB, man->bodyB);
 
-        //     model = buildModelMatrix(rA, vec3(0.05f), quat(1, 0, 0, 0));
-        //     shader->setMat4("model", model);
-        //     shader->setVec3("objectColor", vec4(1, 0, 0, 1));
-        //     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+            model = buildModelMatrix(rA, vec3(0.05f), quat(1, 0, 0, 0));
+            shader->setMat4("model", model);
+            shader->setVec3("objectColor", vec4(1, 0, 0, 1));
+            glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
-        //     model = buildModelMatrix(rB, vec3(0.05f), quat(1, 0, 0, 0));
-        //     shader->setMat4("model", model);
-        //     shader->setVec3("objectColor", vec4(0, 0, 1, 1));
-        //     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-        // }
+            model = buildModelMatrix(rB, vec3(0.05f), quat(1, 0, 0, 0));
+            shader->setMat4("model", model);
+            shader->setVec3("objectColor", vec4(0, 0, 1, 1));
+            glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+        }
 
         // connect the two contact points
         vec3 dir = rB - rA;

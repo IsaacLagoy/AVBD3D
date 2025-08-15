@@ -15,15 +15,37 @@ bool Manifold::initialize() {
     // compute friction
     friction = sqrtf(bodyA->friction * bodyB->friction);
 
-    // TODO store previous contact state
-
+    // store previous contact state
+    Contact oldContacts[4]; for (int i = 0; i < 4; i++) oldContacts[i] = contacts[i];
+    float oldPenalty[MAX_ROWS]; for (int i = 0; i < MAX_ROWS; i++) oldPenalty[i] = penalty[i];
+    float oldLambda[MAX_ROWS];  for (int i = 0; i < MAX_ROWS; i++) oldLambda[i] = lambda[i];
+    bool oldStick[4]; for (int i = 0; i < 4; i++) oldStick[i] = contacts[i].stick;
+    int oldNumContacts = numContacts;
 
     // Compute new contacts
     numContacts = collide(bodyA, bodyB, contacts);
     if (numContacts == 0) return false;
 
-    // TODO Merge old contact data with new contacts
-    
+    // Merge old contact data with new contacts
+    for (int i = 0; i < numContacts; i++) {
+        penalty[i * 3 + 0] = penalty[i * 3 + 1] = penalty[i * 3 + 2] = 0.0f;
+        lambda[i * 3 + 0] = lambda[i * 3 + 1] = lambda[i * 3 + 2] = 0.0f;
+
+        for (int j = 0; j < oldNumContacts; j++) {
+            if (contacts[i] == oldContacts[j]) {
+                for (int k = 0; k <  3; k++) penalty[i * 3 + k] = oldPenalty[j * 3 + k];
+                for (int k = 0; k <  3; k++) lambda[i * 3 + k] = oldLambda[j * 3 + k];
+                contacts[i].stick = oldStick[j];
+
+                // If static friction in last frame, use the old contact points
+                // TODO I'm not sure if this does anything 
+                if (oldStick[j]) {
+                    contacts[i].rA = oldContacts[j].rA;
+                    contacts[i].rB = oldContacts[j].rB;
+                }
+            }
+        }
+    }
 
     // initialize contact data
     for (int i = 0; i < numContacts; i++) {

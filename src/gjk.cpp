@@ -4,25 +4,14 @@ bool gjk(Rigid* bodyA, Rigid* bodyB, Simplex& simplex) {
     vec3 dir;
     for (unsigned short i = 0; i < 20; i++) {
 
-        if (DEBUG_PRINT_GJK) print("Iteration");
-        if (DEBUG_PRINT_GJK) print(i);
-        if (DEBUG_PRINT_GJK) print((int) simplex.size());
-        if (DEBUG_PRINT_GJK) print("dir before");
-        if (DEBUG_PRINT_GJK) print(dir);
-
         // defines direction and determins if collision has happened
         bool detected = handleSimplex(simplex, bodyA, bodyB, dir); 
-
-        if (DEBUG_PRINT_GJK) print("dir after");
-        if (DEBUG_PRINT_GJK) print(dir);
 
         // return early if collision is found
         if (detected) return true;
         // add a new point to simplex
         simplex.add(getSupportPoint(bodyA, bodyB, dir));
-
-        if (DEBUG_PRINT_GJK) print("mink point added:");
-        if (DEBUG_PRINT_GJK) print(simplex[simplex.size() - 1].mink);
+        
         // check if that point was discovered past the origin
         if (glm::dot(simplex[simplex.size() - 1].mink, dir) < 0) return false;
     }

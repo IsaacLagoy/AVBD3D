@@ -39,52 +39,27 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     Simplex simplex = Simplex(); // can prolly go on the stack idk, there's only one rn
     bool collided = gjk(bodyA, bodyB, simplex);
 
-    if (DEBUG_PRINT_GJK) print("position");
-    if (DEBUG_PRINT_GJK) print(bodyA->position);
-    if (DEBUG_PRINT_GJK) print(bodyB->position);
-
     if (!collided) return 0;
-
-    if (DEBUG_PRINT_GJK) print("collided");
-    if (DEBUG_PRINT_GJK) print((int) simplex.size());
-    for (int i = 0; i < 4; i++) if (DEBUG_PRINT_GJK) print(simplex[i].mink);
 
     // run collision resolution
     Polytope* polytope = new Polytope(simplex);
-
-    if (DEBUG_PRINT_GJK) print("created polytope");
-
     epa(bodyA, bodyB, polytope);
-
-    if (DEBUG_PRINT_GJK) print("epa");
 
     if (hasNaN(polytope->front().normal)) std::runtime_error("normal has nan");
 
-    if (DEBUG_PRINT_GJK) print("stats");
-    if (DEBUG_PRINT_GJK) print(polytope->front().normal);
-    if (DEBUG_PRINT_GJK) for (int i = 0; i < 3; i++) print(polytope->front().sps[i]->mink);
+    std::vector<vec3> rAs, rBs;
+    getContact(rAs, rBs, polytope, bodyA, bodyB);
 
     // compute contact information
     contacts[0].normal = polytope->front().normal;
     contacts[0].depth = polytope->front().distance;
+    contacts[0].face = polytope->front();
 
-    std::pair<vec3, vec3> rs = getContact(polytope, bodyA, bodyB);
-
-    contacts[0].rA = inverseTransform(rs.first, bodyA);
-    contacts[0].rB = inverseTransform(rs.second, bodyB);
-
-    bodyA->color = vec4(1, 0, 0, 1);
-    bodyB->color = vec4(0, 0, 1, 1);
-
-    // print("model space contacts");
-    // print(rs.first);
-    // print(rs.second);
+    contacts[0].rA = inverseTransform(rAs[0], bodyA);
+    contacts[0].rB = inverseTransform(rBs[0], bodyB);
 
     // ensure normal is facing the correct direction
-    if (glm::dot(contacts[0].normal, bodyA->position - bodyB->position) < 0) {
-        contacts[0].normal *= -1;
-        if (DEBUG_PRINT_GJK) print("flipping normal");
-    }
+    if (glm::dot(contacts[0].normal, bodyA->position - bodyB->position) < 0) contacts[0].normal *= -1;
 
     delete polytope;
     return 1;

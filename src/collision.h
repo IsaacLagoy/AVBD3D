@@ -2,52 +2,6 @@
 
 #define DEBUG_PRINT_GJK false
 
-// support point
-struct SupportPoint {
-    int indexA = 0;
-    int indexB = 0;
-    vec3 mink = vec3(); // position in Minkowski difference space
-
-    // comparison operator for set
-    bool operator<(const SupportPoint& other) const {
-        if (indexA != other.indexA) return indexA < other.indexA;
-        return indexB < other.indexB;
-    }
-};
-
-struct SupportPointHash {
-    size_t operator()(const SupportPoint& sp) const {
-        size_t h1 = std::hash<int>{}(sp.indexA);
-        size_t h2 = std::hash<int>{}(sp.indexB);
-        return h1 ^ (h2 << 1);  // combine hashes
-    }
-};
-
-struct SupportPointEqual {
-    bool operator()(const SupportPoint& a, const SupportPoint& b) const {
-        return a.indexA == b.indexA && a.indexB == b.indexB;
-    }
-};
-
-// edge
-using Edge = std::pair<const SupportPoint*, const SupportPoint*>;
-
-// polytope face
-struct Face {
-    std::array<const SupportPoint*, 3> sps;
-    vec3 normal;
-    float distance;
-
-    bool operator==(const Face& other) const {
-        return sps == other.sps;
-    }
-
-    // overrides edge reference with indexed edge from face
-    void overrideEdge(int i, Edge& edge) const {
-        edge = { sps[i % 3], sps[(i + 1) % 3] }; 
-    }
-};
-
 // simplex
 using Simplex = UnorderedArray<SupportPoint, 4>;
 enum Index { A, B, C, D };
@@ -76,8 +30,6 @@ struct Polytope {
     const Face& front() const;
 };
 
-
-
 // function declarations
 SupportPoint getSupportPoint(Rigid* bodyA, Rigid* bodyB, const vec3& dir);
 bool handleSimplex(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
@@ -90,5 +42,5 @@ bool      simplex4(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
 bool gjk(Rigid* bodyA, Rigid* bodyB, Simplex& simplex);
 bool epa(Rigid* bodyA, Rigid* bodyB, Polytope* polytope);
 
-std::pair<vec3, vec3> barycentric(Polytope* polytope, Rigid* bodyA, Rigid* bodyB);
-std::pair<vec3, vec3> getContact(Polytope* polytope, Rigid* bodyA, Rigid* bodyB);
+void barycentric(std::vector<vec3>& rAs, std::vector<vec3>& rBs, Polytope* polytope, Rigid* bodyA, Rigid* bodyB);
+void getContact(std::vector<vec3>& rAs, std::vector<vec3>& rBs, Polytope* polytope, Rigid* bodyA, Rigid* bodyB);
