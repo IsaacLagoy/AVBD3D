@@ -45,6 +45,8 @@ To be compatible with the future C++ version of [Baslisk Engine](https://github.
 - GLFW
 - GLAD
 - GLM
+- STB
+- ASSIMP
 
 There are a few major difference between this engine and the one seen in the avbd_demo2d provided by the University of Utah, primarily in the collision pipeline. 
 
