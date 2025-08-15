@@ -476,10 +476,10 @@ void getContact(std::vector<vec3>& rAs, std::vector<vec3>& rBs, Polytope* polyto
             barycentric(rAs, rBs, polytope, bodyA, bodyB);
             return;
         }
-        vec3 p = avgVecs(pts);
 
-        rAs.push_back(p);
-        rBs.push_back(closestPointOnPlane(b0, b1, b2, p));
+        // add all contact points
+        rAs.insert(rAs.begin(), pts.begin(), pts.end());
+        for (vec3 p : pts) rBs.push_back(closestPointOnPlane(b0, b1, b2, p));
         return;
     };
     if (affA.dim == 2 && affB.dim == 1) {
@@ -488,10 +488,10 @@ void getContact(std::vector<vec3>& rAs, std::vector<vec3>& rBs, Polytope* polyto
             barycentric(rAs, rBs, polytope, bodyA, bodyB);
             return;
         }
-        vec3 p = avgVecs(pts);
 
-        rAs.push_back(closestPointOnPlane(a0, a1, a2, p));
-        rBs.push_back(p);
+        // add all contact points
+        for (vec3 p : pts) rAs.push_back(closestPointOnPlane(a0, a1, a2, p));
+        rBs.insert(rBs.begin(), pts.begin(), pts.end());
         return;
     };
 
@@ -504,9 +504,7 @@ void getContact(std::vector<vec3>& rAs, std::vector<vec3>& rBs, Polytope* polyto
         return;
     }
 
-    vec3 p = avgVecs(pts);
-
-    rAs.push_back(p);
-    rBs.push_back(closestPointOnPlane(b0, b1, b2, p));
+    rAs.insert(rAs.begin(), pts.begin(), pts.end());
+    for (vec3 p : pts) rBs.push_back(closestPointOnPlane(b0, b1, b2, p));
     return;
 }

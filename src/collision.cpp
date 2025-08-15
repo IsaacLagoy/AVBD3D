@@ -50,17 +50,25 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     std::vector<vec3> rAs, rBs;
     getContact(rAs, rBs, polytope, bodyA, bodyB);
 
-    // compute contact information
-    contacts[0].normal = polytope->front().normal;
-    contacts[0].depth = polytope->front().distance;
-    contacts[0].face = polytope->front();
+    if (rAs.size() != rBs.size()) throw std::runtime_error("Contact point size missmatch");
 
-    contacts[0].rA = inverseTransform(rAs[0], bodyA);
-    contacts[0].rB = inverseTransform(rBs[0], bodyB);
+    int size = glm::clamp((int) rAs.size(), 0, 4);
+
+    for (int i = 0; i < size; i++) {
+        // compute contact information
+        contacts[i].normal = polytope->front().normal;
+        contacts[i].depth = polytope->front().distance;
+        contacts[i].face = polytope->front();
+        contacts[i].rA = inverseTransform(rAs[i], bodyA);
+        contacts[i].rB = inverseTransform(rBs[i], bodyB);
+
+        if (hasNaN(rAs[i])) throw std::runtime_error("Contact point from rA has Nan");
+        if (hasNaN(rBs[i])) throw std::runtime_error("Contact point from rB has Nan");
+    }
 
     // ensure normal is facing the correct direction
-    if (glm::dot(contacts[0].normal, bodyA->position - bodyB->position) < 0) contacts[0].normal *= -1;
+    for (int i = 0; i < size; i++) if (glm::dot(contacts[i].normal, bodyA->position - bodyB->position) < 0)  contacts[i].normal *= -1;
 
     delete polytope;
-    return 1;
+    return size;
 }

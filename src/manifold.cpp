@@ -11,7 +11,6 @@ Manifold::Manifold(Solver* solver, Rigid* bodyA, Rigid* bodyB)
 }
 
 bool Manifold::initialize() {
-
     // compute friction
     friction = sqrtf(bodyA->friction * bodyB->friction);
 
@@ -23,8 +22,10 @@ bool Manifold::initialize() {
     int oldNumContacts = numContacts;
 
     // Compute new contacts
+    // print("before collision");
     numContacts = collide(bodyA, bodyB, contacts);
     if (numContacts == 0) return false;
+    // print("after collision");
 
     // Merge old contact data with new contacts
     for (int i = 0; i < numContacts; i++) {
@@ -76,15 +77,30 @@ bool Manifold::initialize() {
         contact.C0.z = glm::dot(contact.t2,     drX);
     }
 
+    // print("end initialize");
     return true;
 }
 
 void Manifold::computeConstraint(float alpha) {
+    // print("compute constraint");
     // compute positional changes
     for (int i = 0; i < numContacts; i++) {
         // --- Simple, Direct Constraint Calculation ---
         // Goal: C = 0 when objects are just touching, C < 0 when penetrating
         Contact& contact = contacts[i];
+
+        // print(contact.C0);
+        // print(contact.JAn);
+        // print(contact.JAt1);
+        // print(contact.JAt2);
+        // print(contact.JBn);
+        // print(contact.JBt1);
+        // print(contact.JBt2);
+
+        // print(bodyA->position - bodyA->initialPosition);
+        // print(bodyA->deltaWInitial());
+        // print(bodyB->position - bodyB->initialPosition);
+        // print(bodyB->deltaWInitial());
 
         vec6 dpA = { bodyA->position - bodyA->initialPosition, bodyA->deltaWInitial() };
         vec6 dpB = { bodyB->position - bodyB->initialPosition, bodyB->deltaWInitial() };
@@ -105,9 +121,12 @@ void Manifold::computeConstraint(float alpha) {
         // --- Sticking Logic ---
         contact.stick = abs(lambda[i * 3 + 1]) < frictionBound && abs(contact.C0.z) < STICK_THRESH; // TODO check this convertsion to 3d
     }
+
+    // print("end compute constraint");
 }
 
 void Manifold::computeDerivatives(Rigid* body) {
+    // print("begin compute derivatives");
     // Just store precomputed derivatives in J for the desired body
     for (int i = 0; i < numContacts; i++)
     {
@@ -119,4 +138,5 @@ void Manifold::computeDerivatives(Rigid* body) {
         J[i * 3 + 1] = isA ? contact.JAt1 : contact.JBt1;
         J[i * 3 + 2] = isA ? contact.JAt2 : contact.JBt2;
     }
+    // print("end compute derivaties");
 }
