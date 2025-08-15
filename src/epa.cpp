@@ -22,10 +22,10 @@ Polytope::Polytope(const Simplex& simplex) : sps(), pq(), vertTot(0) {
     }
 
     // add faces with correct combinations
-    add(buildFace(pts[0], pts[1], pts[2]).value()); 
-    add(buildFace(pts[0], pts[3], pts[1]).value()); 
-    add(buildFace(pts[0], pts[2], pts[3]).value()); 
-    add(buildFace(pts[1], pts[3], pts[2]).value()); 
+    add(buildFace(pts[0], pts[1], pts[2], true).value()); 
+    add(buildFace(pts[0], pts[3], pts[1], true).value()); 
+    add(buildFace(pts[0], pts[2], pts[3], true).value()); 
+    add(buildFace(pts[1], pts[3], pts[2], true).value()); 
 }
 
 Polytope::~Polytope() {}
@@ -51,7 +51,7 @@ const SupportPoint* Polytope::add(const SupportPoint& sp) {
 void Polytope::add(Face face) { pq.insert(face); }
 
 // create new faces using existing points
-std::optional<Face> Polytope::buildFace(const SupportPoint* pa, const SupportPoint* pb, const SupportPoint* pc) {
+std::optional<Face> Polytope::buildFace(const SupportPoint* pa, const SupportPoint* pb, const SupportPoint* pc, bool force) {
 
     const vec3& av = pa->mink;
     const vec3& bv = pb->mink;
@@ -68,7 +68,11 @@ std::optional<Face> Polytope::buildFace(const SupportPoint* pa, const SupportPoi
     vec3 v = cv - av;
     face.normal = glm::cross(u, v);
 
-    if (glm::length2(face.normal) < 1e-8f) return std::nullopt; // face is degenerate
+    if (glm::length2(face.normal) < 1e-8f) {
+        if (!force) return std::nullopt; // face is degenerate
+        face.normal = {0, 1, 0};
+    }
+    
     face.normal = glm::normalize(face.normal);
 
     face.distance = projectedDistance(face.normal, av);
@@ -154,5 +158,5 @@ bool epa(Rigid* bodyA, Rigid* bodyB, Polytope* polytope) {
         done = polytope->insert(sp);
     }
 
-    return false;
+    return true;
 }

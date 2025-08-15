@@ -70,9 +70,10 @@ bool Manifold::initialize() {
         contact.JBt1 = vec6(-1.0f * contact.t1    , -1.0f * glm::cross(wB, contact.t1)    );
         contact.JBt2 = vec6(-1.0f * contact.t2    , -1.0f * glm::cross(wB, contact.t2)    );
 
-        mat3x3 orthonormalBasis = mat3x3(contact.t1, contact.t2, contact.normal);
-
-        contact.C0 = orthonormalBasis * (bodyA->position + wA - bodyB->position - wB); // TODO add collision margin
+        vec3 drX = bodyA->position + wA - bodyB->position - wB;
+        contact.C0.x = glm::dot(contact.normal, drX) + COLLISION_MARGIN;
+        contact.C0.y = glm::dot(contact.t1,     drX);
+        contact.C0.z = glm::dot(contact.t2,     drX);
     }
 
     return true;

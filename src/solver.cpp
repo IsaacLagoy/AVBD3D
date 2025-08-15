@@ -127,12 +127,12 @@ void Solver::step(float dt) {
                     // compute the clamped force magnitude (sec 3.2)
                     float f = glm::clamp(force->penalty[i] * force->C[i] + lambda + force->motor[i], force->fmin[i], force->fmax[i]);
 
-                    mat3x3 G = glm::diagonal3x3(glm::abs(glm::cross(force->J[i].angular, glm::transpose(body->getInertiaTensor()) * force->J[i].angular)) * fabs(f));
+                    mat3x3 G = glm::diagonal3x3(glm::abs(glm::cross(force->J[i].angular, glm::transpose(body->getInertiaTensor()) * force->J[i].angular))) * abs(f);
 
                     // accumulate force (eq. 13) and hessian (eq. 17)
                     rhs += force->J[i] * f;
                     lhs += outer(force->J[i], force->J[i] * force->penalty[i]);
-                    // lhs.addBottomRight(G);
+                    lhs.addBottomRight(G);
                 }
             }
 
