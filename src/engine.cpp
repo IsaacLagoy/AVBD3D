@@ -116,7 +116,9 @@ void Engine::render() {
     glm::mat4 model;
 
     // render wire frame for visibility
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    #ifdef WIREFRAME_RIGIDS
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    #endif
     // Iterate through all rigid bodies in the physics engine and render them
     for (Rigid* rigid = bodies; rigid != 0; rigid = rigid->next) {
         // Calculate the model matrix for the current rigid body
@@ -138,66 +140,76 @@ void Engine::render() {
     for (Force* force = forces; force != 0; force = force->next) {
         Manifold* man = (Manifold*) force;
 
-        vec3 rA = transform(man->contacts[0].rA, man->bodyA);
-        vec3 rB = transform(man->contacts[0].rB, man->bodyB);
+        for (int i = 0; i < man->numContacts; i++) {
+            vec3 rA = transform(man->contacts[i].rA, man->bodyA);
+            vec3 rB = transform(man->contacts[i].rB, man->bodyB);
 
-        // // graph rA
-        // model = buildModelMatrix(rA, vec3(0.1f), quat(1, 0, 0, 0));
-        // shader->setMat4("model", model);
-        // shader->setVec3("objectColor", vec4(1, 0, 0, 1));
-        // glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+            #ifdef SHOW_CONTACT_POINTS
+                // graph rA
+                model = buildModelMatrix(rA, vec3(0.1f), quat(1, 0, 0, 0));
+                shader->setMat4("model", model);
+                shader->setVec3("objectColor", vec4(1, 0, 0, 1));
+                glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
-        // // graph rB
-        // model = buildModelMatrix(rB, vec3(0.1f), quat(1, 0, 0, 0));
-        // shader->setMat4("model", model);
-        // shader->setVec3("objectColor", vec4(0, 0, 1, 1));
-        // glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+                // graph rB
+                model = buildModelMatrix(rB, vec3(0.1f), quat(1, 0, 0, 0));
+                shader->setMat4("model", model);
+                shader->setVec3("objectColor", vec4(0, 0, 1, 1));
+                glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+            #endif
 
-        // // project all minkowski points
-        // for (int i = 0; i < 3; i++) {
-        //     vec3 rA = transform(man->contacts[0].face.sps[i].indexA, man->bodyA);
-        //     vec3 rB = transform(man->contacts[0].face.sps[i].indexB, man->bodyB);
+            #ifdef SHOW_EPA_VERICES
+                // project all minkowski points
+                for (int i = 0; i < 3; i++) {
+                    vec3 rA = transform(man->contacts[i].face.sps[i].indexA, man->bodyA);
+                    vec3 rB = transform(man->contacts[i].face.sps[i].indexB, man->bodyB);
 
-        //     model = buildModelMatrix(rA, vec3(0.05f), quat(1, 0, 0, 0));
-        //     shader->setMat4("model", model);
-        //     shader->setVec3("objectColor", vec4(1, 0, 0, 1));
-        //     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+                    model = buildModelMatrix(rA, vec3(0.05f), quat(1, 0, 0, 0));
+                    shader->setMat4("model", model);
+                    shader->setVec3("objectColor", vec4(1, 0, 0, 1));
+                    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
-        //     model = buildModelMatrix(rB, vec3(0.05f), quat(1, 0, 0, 0));
-        //     shader->setMat4("model", model);
-        //     shader->setVec3("objectColor", vec4(0, 0, 1, 1));
-        //     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-        // }
+                    model = buildModelMatrix(rB, vec3(0.05f), quat(1, 0, 0, 0));
+                    shader->setMat4("model", model);
+                    shader->setVec3("objectColor", vec4(0, 0, 1, 1));
+                    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+                }
+            #endif
 
-        // connect the two contact points
-        vec3 dir = rB - rA;
-        float dist = glm::length(dir);
-        quat look = glm::quatLookAt(dist < 1e-9f ? vec3{ 0, 1, 0, } : glm::normalize(dir), vec3{0, 1, 0});
-        vec3 center = (rA + rB) * 0.5f;
+            #ifdef SHOW_CONSTRAINTS
+                // connect the two contact points
+                vec3 dir = rB - rA;
+                float dist = glm::length(dir);
+                quat look = glm::quatLookAt(dist < 1e-9f ? vec3{ 0, 1, 0, } : glm::normalize(dir), vec3{0, 1, 0});
+                vec3 center = (rA + rB) * 0.5f;
 
-        model = buildModelMatrix(center, vec3(0.02, 0.02, glm::length(dir)), look);
-        shader->setMat4("model", model);
-        shader->setVec3("objectColor", vec4(1, 0, 1, 1));
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+                model = buildModelMatrix(center, vec3(0.02, 0.02, glm::length(dir)), look);
+                shader->setMat4("model", model);
+                shader->setVec3("objectColor", vec4(1, 0, 1, 1));
+                glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+            #endif
 
-        // graph normal
-        vec3 n = man->contacts[0].normal; // already world space
-        vec3 up = glm::abs(n.y) > 0.99f ? vec3(1,0,0) : vec3(0,1,0);
-        look = glm::quatLookAt(n, up);
+            #ifdef SHOW_NORMALS
+                // graph normal
+                vec3 n = man->contacts[i].normal; // already world space
+                vec3 up = glm::abs(n.y) > 0.99f ? vec3(1,0,0) : vec3(0,1,0);
+                look = glm::quatLookAt(n, up);
 
-        vec3 lineCenter = (man->bodyA->position + man->bodyB->position) / 2.0f;  // center of the line
-        float length = 2.0f;                     // desired visual length
-        model = buildModelMatrix(lineCenter, vec3(0.02f, 0.02f, length), look);
-        shader->setMat4("model", model);
-        shader->setVec3("objectColor", vec4(0,1,0,1));
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+                vec3 lineCenter = (man->bodyA->position + man->bodyB->position) / 2.0f;  // center of the line
+                float length = 2.0f;                     // desired visual length
+                model = buildModelMatrix(lineCenter, vec3(0.02f, 0.02f, length), look);
+                shader->setMat4("model", model);
+                shader->setVec3("objectColor", vec4(0,1,0,1));
+                glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
-        // put normal tip
-        vec3 tipCenter = (man->bodyA->position + man->bodyB->position) / 2.0f + n;
-        model = buildModelMatrix(tipCenter, vec3(0.1f), quat(1, 0, 0, 0));
-        shader->setMat4("model", model);
-        shader->setVec3("objectColor", vec4(0,1,0,1));
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+                // put normal tip
+                vec3 tipCenter = (man->bodyA->position + man->bodyB->position) / 2.0f + n;
+                model = buildModelMatrix(tipCenter, vec3(0.1f), quat(1, 0, 0, 0));
+                shader->setMat4("model", model);
+                shader->setVec3("objectColor", vec4(0,1,0,1));
+                glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+            #endif
+        }
     }
 }
 

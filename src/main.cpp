@@ -20,9 +20,9 @@ int main() {
     // Create ground plane (large flat box)
     new Rigid(&solver, {15, 0.25f, 15}, -1.0f, 0.5f, {0, -1.0f, 0});
 
-    // scale = vec3(uniform(0.5f, 1.5f), uniform(0.5f, 1.5f), uniform(0.5f, 1.5f))
-    for (int i = 0; i < 5; ++i) {
-        new Rigid(&solver, vec3(1.0f), 10.0f, 0.4f, vec3(0.0f, i * 3, 0.0f) + vec3(uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff)), quat(uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff)), vec6());
+    // scale = 
+    for (int i = 0; i < 20; ++i) {
+        new Rigid(&solver, vec3(uniform(0.5f, 1.5f), uniform(0.5f, 1.5f), uniform(0.5f, 1.5f)), 10.0f, 0.4f, vec3(0.0f, 0.0f, 0.0f) + vec3(uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff)), quat(uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff)), vec6());
     }
 
     // 2. Create rendering engine and pass bodies

@@ -29,13 +29,31 @@ To run:
 ./render
 ```
 
-### Building on Linux Wayland
+### Build Options
 
+Show normals (Default: ON)
 ```bash
-mkdir build
-cd build
-cmake -DUSE_WAYLAND=ON ..
-cmake --build .
+cmake -D SHOW_NORMALS=ON ..
+```
+
+Show constraints (Default: ON)
+```bash
+cmake -D SHOW_CONSTRAINTS=ON ..
+```
+
+Show rigid bodies as wireframes (Default: OFF)
+```bash
+cmake -D WIREFRAME_RIGIDS=ON ..
+```
+
+Show near-face polytope vertices (Default: OFF)
+```bash
+cmake -D SHOW_EPA_VERTICES=ON ..
+```
+
+Show contact points (Default: OFF)
+```bash
+cmake -D SHOW_CONTACT_POINTS=ON ..
 ```
 
 ## About This Version
