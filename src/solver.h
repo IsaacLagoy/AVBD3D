@@ -189,6 +189,7 @@ struct Manifold : Force {
         vec3 C0; // accumulated positional error (n, t1, t2)
         bool stick; // static vs dynamic friction
         StackFace face; // saves contact data
+        int type;
 
         Contact() : rA(), rB(), normal(), depth(0.0), t1(), t2(), JAn(), JBn(), JAt1(), JBt1(), JAt2(), JBt2(), C0(), stick(true), face() {}
 

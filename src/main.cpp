@@ -15,7 +15,7 @@ int main() {
     solver.iterations = 10;
 
     vec3 offset = vec3(uniform(-2, 2), uniform(-2, 2),uniform(-2, 2));
-    float diff = 0.0f;
+    float diff = 0.3f;
 
     // Create ground plane (large flat box)
     new Rigid(&solver, {15, 0.25f, 15}, -1.0f, 0.5f, {0, -1.0f, 0});

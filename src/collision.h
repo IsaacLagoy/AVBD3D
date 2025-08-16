@@ -42,5 +42,4 @@ bool      simplex4(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
 bool gjk(Rigid* bodyA, Rigid* bodyB, Simplex& simplex);
 bool epa(Rigid* bodyA, Rigid* bodyB, Polytope* polytope);
 
-void barycentric(std::vector<vec3>& rAs, std::vector<vec3>& rBs, Polytope* polytope, Rigid* bodyA, Rigid* bodyB);
-void getContact(std::vector<vec3>& rAs, std::vector<vec3>& rBs, Polytope* polytope, Rigid* bodyA, Rigid* bodyB);
+int getContact(std::vector<vec3>& rAs, std::vector<vec3>& rBs, Polytope* polytope, Rigid* bodyA, Rigid* bodyB);

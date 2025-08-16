@@ -143,6 +143,7 @@ void Engine::render() {
         for (int i = 0; i < man->numContacts; i++) {
             vec3 rA = transform(man->contacts[i].rA, man->bodyA);
             vec3 rB = transform(man->contacts[i].rB, man->bodyB);
+            int type = man->contacts[i].type;
 
             #ifdef SHOW_CONTACT_POINTS
                 // graph rA
@@ -158,11 +159,11 @@ void Engine::render() {
                 glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
             #endif
 
-            #ifdef SHOW_EPA_VERICES
+            #ifdef SHOW_EPA_VERTICES
                 // project all minkowski points
-                for (int i = 0; i < 3; i++) {
-                    vec3 rA = transform(man->contacts[i].face.sps[i].indexA, man->bodyA);
-                    vec3 rB = transform(man->contacts[i].face.sps[i].indexB, man->bodyB);
+                for (int j = 0; j < 3; j++) {
+                    vec3 rA = transform(man->contacts[j].face.sps[j].indexA, man->bodyA);
+                    vec3 rB = transform(man->contacts[j].face.sps[j].indexB, man->bodyB);
 
                     model = buildModelMatrix(rA, vec3(0.05f), quat(1, 0, 0, 0));
                     shader->setMat4("model", model);
@@ -185,7 +186,7 @@ void Engine::render() {
 
                 model = buildModelMatrix(center, vec3(0.02, 0.02, glm::length(dir)), look);
                 shader->setMat4("model", model);
-                shader->setVec3("objectColor", vec4(1, 0, 1, 1));
+                shader->setVec3("objectColor", vec4(type & 4, type & 2, type & 1, 1));
                 glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
             #endif
 
@@ -195,7 +196,7 @@ void Engine::render() {
                 vec3 up = glm::abs(n.y) > 0.99f ? vec3(1,0,0) : vec3(0,1,0);
                 look = glm::quatLookAt(n, up);
 
-                vec3 lineCenter = (man->bodyA->position + man->bodyB->position) / 2.0f;  // center of the line
+                vec3 lineCenter = (rA + rB) / 2.0f;  // center of the line
                 float length = 2.0f;                     // desired visual length
                 model = buildModelMatrix(lineCenter, vec3(0.02f, 0.02f, length), look);
                 shader->setMat4("model", model);
@@ -203,7 +204,7 @@ void Engine::render() {
                 glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
                 // put normal tip
-                vec3 tipCenter = (man->bodyA->position + man->bodyB->position) / 2.0f + n;
+                vec3 tipCenter = (rA + rB) / 2.0f + n;
                 model = buildModelMatrix(tipCenter, vec3(0.1f), quat(1, 0, 0, 0));
                 shader->setMat4("model", model);
                 shader->setVec3("objectColor", vec4(0,1,0,1));

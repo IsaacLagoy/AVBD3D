@@ -21,13 +21,23 @@ glm::mat4 buildInverseModelMatrix(const Rigid* b) {
     glm::mat4 invRotation = glm::mat4(glm::conjugate(b->rotation));
     glm::mat4 invScaling = glm::scale(glm::mat4(1), 1.0f / b->scale);
     
-    return invScaling * invRotation * invTranslation;
+    return invRotation * invScaling * invTranslation;
 }
 
 glm::vec3 inverseTransform(const glm::vec3& worldPoint, Rigid* body) {
-    glm::vec4 four = glm::vec4(worldPoint, 1.0f);
-    return glm::vec3(buildInverseModelMatrix(body) * four);
+    // Undo translation
+    glm::vec3 p = worldPoint - body->position;
+
+    // Undo rotation
+    glm::quat invRot = glm::conjugate(glm::normalize(body->rotation));
+    p = invRot * p;
+
+    // Undo non-uniform scale
+    p /= body->scale; // component-wise division
+
+    return p;
 }
+
 
 mat6x6 diagonalLump(const mat6x6& mat) {
     mat6x6 nMat = mat6x6();

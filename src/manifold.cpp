@@ -15,11 +15,12 @@ bool Manifold::initialize() {
     friction = sqrtf(bodyA->friction * bodyB->friction);
 
     // store previous contact state
-    Contact oldContacts[4]; for (int i = 0; i < 4; i++) oldContacts[i] = contacts[i];
+    Contact oldContacts[4]; for (int i = 0; i < numContacts; i++) oldContacts[i] = contacts[i];
     float oldPenalty[MAX_ROWS]; for (int i = 0; i < MAX_ROWS; i++) oldPenalty[i] = penalty[i];
     float oldLambda[MAX_ROWS];  for (int i = 0; i < MAX_ROWS; i++) oldLambda[i] = lambda[i];
-    bool oldStick[4]; for (int i = 0; i < 4; i++) oldStick[i] = contacts[i].stick;
-    bool oldContactUsed[4]; for (int i = 0; i < 4; i++) oldContactUsed[i] = false;
+    bool oldStick[4]; for (int i = 0; i < numContacts; i++) oldStick[i] = contacts[i].stick;
+    int oldType[4]; for (int i = 0; i < numContacts; i++) oldType[i] = contacts[i].type;
+    bool oldContactUsed[4]; for (int i = 0; i < numContacts; i++) oldContactUsed[i] = false;
     int oldNumContacts = numContacts;
 
     // Compute new contacts
@@ -36,6 +37,7 @@ bool Manifold::initialize() {
                 for (int k = 0; k < 3; k++) penalty[i * 3 + k] = oldPenalty[j * 3 + k];
                 for (int k = 0; k < 3; k++) lambda[i * 3 + k] = oldLambda[j * 3 + k];
                 contacts[i].stick = oldStick[j];
+                contacts[i].type = oldType[j];
 
                 // If static friction in last frame, use the old contact points
                 // TODO I'm not sure if this does anything 
@@ -60,19 +62,27 @@ bool Manifold::initialize() {
     // check if old contacts should still be used
     if (numContacts < 4 && sumContacts > 0) {
 
-        // print("points");
-        // print(sumContacts);
-        // print(numContacts);
-
         // check if contact is still in the same place
         for (int i = 0; i < oldNumContacts; i++) {
             if (!canBeUsed[i]) continue;
             const Contact& contact = oldContacts[i];
 
             // ensure all minkowski difference support points are still in location
+            vec3 pOnA = transform(contact.rA, bodyA);
+            vec3 pOnB = transform(contact.rB, bodyB);
+            vec3 sep = pOnA - pOnB;
+            
+            // determine if seperation is in direction of the current normal
+            if (glm::dot(contacts[0].normal, sep) > COLLISION_MARGIN ) {
+                canBeUsed[i] = false;
+                sumContacts--;
+                continue;
+            }
+
+            // check if minkowski points have drifted too much
             for (int j = 0; j < 3; j++) {
-                vec3 curMink = transform(contact.face.sps[j].indexA, bodyB) - transform(contact.face.sps[j].indexB, bodyA);
-                if (glm::dot(curMink - contact.face.sps[j].mink, contact.normal) > 0) {
+                vec3 curMink = transform(contact.face.sps[j].indexB, bodyB) - transform(contact.face.sps[j].indexA, bodyA);
+                if (glm::length2(curMink - contact.face.sps[j].mink) > COLLISION_MARGIN) {
                     canBeUsed[i] = false;
                     sumContacts--;
                     break;
@@ -112,9 +122,9 @@ bool Manifold::initialize() {
                 for (int k = 0; k < 3; k++) penalty[numContacts * 3 + k] = oldPenalty[oldIndex * 3 + k];
                 for (int k = 0; k < 3; k++) lambda[numContacts * 3 + k] = oldLambda[oldIndex * 3 + k];
                 contacts[numContacts].stick = oldStick[oldIndex];
+                contacts[numContacts].type = oldType[oldIndex];
 
                 // If static friction in last frame, use the old contact points
-                // TODO I'm not sure if this does anything 
                 if (oldStick[oldIndex]) {
                     contacts[numContacts].rA = oldContacts[oldIndex].rA;
                     contacts[numContacts].rB = oldContacts[oldIndex].rB;

@@ -48,7 +48,7 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     if (hasNaN(polytope->front().normal)) std::runtime_error("normal has nan");
 
     std::vector<vec3> rAs, rBs;
-    getContact(rAs, rBs, polytope, bodyA, bodyB);
+    int type = getContact(rAs, rBs, polytope, bodyA, bodyB);
 
     if (rAs.size() != rBs.size()) throw std::runtime_error("Contact point size missmatch");
 
@@ -61,6 +61,7 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
         contacts[i].face = polytope->front();
         contacts[i].rA = inverseTransform(rAs[i], bodyA);
         contacts[i].rB = inverseTransform(rBs[i], bodyB);
+        contacts[i].type = type;
 
         if (hasNaN(rAs[i])) throw std::runtime_error("Contact point from rA has Nan");
         if (hasNaN(rBs[i])) throw std::runtime_error("Contact point from rB has Nan");
