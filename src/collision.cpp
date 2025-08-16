@@ -57,7 +57,7 @@ int Manifold::collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts) {
     for (int i = 0; i < size; i++) {
         // compute contact information
         contacts[i].normal = polytope->front().normal;
-        contacts[i].depth = polytope->front().distance;
+        contacts[i].depth = polytope->front().distance * 10;
         contacts[i].face = polytope->front();
         contacts[i].rA = inverseTransform(rAs[i], bodyA);
         contacts[i].rB = inverseTransform(rBs[i], bodyB);

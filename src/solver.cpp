@@ -23,7 +23,7 @@ void Solver::defaultParams()
     // depend on the length, mass, and constraint function scales (ie units) of your simulation,
     // along with your strategy for incrementing the penalty parameters.
     // If the value is not in the right range, you may see slower convergance for complex scenes.
-    beta = 100000.0f;
+    beta = 1000.0f;
 
     // Alpha controls how much stabilization is applied. Higher values give slower and smoother
     // error correction, and lower values are more responsive and energetic. Tune this depending
@@ -172,5 +172,13 @@ void Solver::step(float dt) {
         body->prevVelocity = body->velocity;
         if (body->mass > 0)
             body->velocity = vec6{ body->position - body->initialPosition, body->deltaWInitial() } / dt;
+    }
+
+    // TEMP respawn fallen blocks to the origin
+    for (Rigid* body = bodies; body != nullptr; body = body->next) {
+        if (glm::length2(body->position) > 1.0e5f) {
+            body->position = {0, 2.0, 0};
+            body->velocity.linear = {0, 0, 0};
+        }
     }
 }

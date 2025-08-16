@@ -19,13 +19,12 @@ bool Manifold::initialize() {
     float oldPenalty[MAX_ROWS]; for (int i = 0; i < MAX_ROWS; i++) oldPenalty[i] = penalty[i];
     float oldLambda[MAX_ROWS];  for (int i = 0; i < MAX_ROWS; i++) oldLambda[i] = lambda[i];
     bool oldStick[4]; for (int i = 0; i < 4; i++) oldStick[i] = contacts[i].stick;
+    bool oldContactUsed[4]; for (int i = 0; i < 4; i++) oldContactUsed[i] = false;
     int oldNumContacts = numContacts;
 
     // Compute new contacts
-    // print("before collision");
     numContacts = collide(bodyA, bodyB, contacts);
     if (numContacts == 0) return false;
-    // print("after collision");
 
     // Merge old contact data with new contacts
     for (int i = 0; i < numContacts; i++) {
@@ -34,8 +33,8 @@ bool Manifold::initialize() {
 
         for (int j = 0; j < oldNumContacts; j++) {
             if (contacts[i] == oldContacts[j]) {
-                for (int k = 0; k <  3; k++) penalty[i * 3 + k] = oldPenalty[j * 3 + k];
-                for (int k = 0; k <  3; k++) lambda[i * 3 + k] = oldLambda[j * 3 + k];
+                for (int k = 0; k < 3; k++) penalty[i * 3 + k] = oldPenalty[j * 3 + k];
+                for (int k = 0; k < 3; k++) lambda[i * 3 + k] = oldLambda[j * 3 + k];
                 contacts[i].stick = oldStick[j];
 
                 // If static friction in last frame, use the old contact points
@@ -44,6 +43,81 @@ bool Manifold::initialize() {
                     contacts[i].rA = oldContacts[j].rA;
                     contacts[i].rB = oldContacts[j].rB;
                 }
+
+                oldContactUsed[j] = true;
+            }
+        }
+    }
+
+    // calculate 
+    bool canBeUsed[4]; 
+    int sumContacts = 0;
+    for (int i = 0; i < oldNumContacts; i++) {
+        canBeUsed[i] = !oldContactUsed[i];
+        if (canBeUsed[i]) sumContacts++;
+    }
+
+    // check if old contacts should still be used
+    if (numContacts < 4 && sumContacts > 0) {
+
+        // check if contact is still in the same place
+        for (int i = 0; i < oldNumContacts; i++) {
+            if (!canBeUsed[i]) continue;
+            const Contact& contact = oldContacts[i];
+
+            // ensure all minkowski difference support points are still in location
+            for (int j = 0; j < 3; j++) {
+                vec3 curMink = transform(contact.face.sps[j].indexA, bodyB) - transform(contact.face.sps[j].indexB, bodyA);
+                if (glm::length2(curMink - contact.face.sps[j].mink) > COLLISION_MARGIN) {
+                    canBeUsed[i] = false;
+                    sumContacts--;
+                    break;
+                }
+            }
+        }
+
+        if (sumContacts > 0) {
+            // pick best old contact points to update
+            // TODO find better selection algorithm
+            vec3 tot = vec3();
+            for (int i = 0; i < numContacts; i++) tot += (contacts[i].rA + contacts[i].rB) / 2.0f;
+
+            vec3 avgs[4];
+            for (int i = 0; i < oldNumContacts; i++) avgs[i] = (oldContacts[i].rA + oldContacts[i].rB) / 2.0f;
+
+            while (numContacts < 4 && sumContacts > 0) {
+                vec3 center = tot / (float) numContacts;
+                float bestScore = -1;
+                int oldIndex = -1;
+
+                // find furthest point from center
+                for (int i = 0; i < oldNumContacts; i++) {
+                    if (!canBeUsed[i]) continue;
+                    float score = glm::length2(center - avgs[i]);
+                    if (bestScore == -1 || bestScore < score) {
+                        bestScore = score;
+                        oldIndex = i;
+                    }
+                }
+
+                // add best old point to new point
+                canBeUsed[oldIndex] = false;
+                tot += avgs[oldIndex];
+
+                contacts[numContacts] = oldContacts[oldIndex];
+                for (int k = 0; k < 3; k++) penalty[numContacts * 3 + k] = oldPenalty[oldIndex * 3 + k];
+                for (int k = 0; k < 3; k++) lambda[numContacts * 3 + k] = oldLambda[oldIndex * 3 + k];
+                contacts[numContacts].stick = oldStick[oldIndex];
+
+                // If static friction in last frame, use the old contact points
+                // TODO I'm not sure if this does anything 
+                if (oldStick[oldIndex]) {
+                    contacts[numContacts].rA = oldContacts[oldIndex].rA;
+                    contacts[numContacts].rB = oldContacts[oldIndex].rB;
+                }
+
+                sumContacts--;
+                numContacts++;
             }
         }
     }
@@ -77,30 +151,15 @@ bool Manifold::initialize() {
         contact.C0.z = glm::dot(contact.t2,     drX);
     }
 
-    // print("end initialize");
     return true;
 }
 
 void Manifold::computeConstraint(float alpha) {
-    // print("compute constraint");
     // compute positional changes
     for (int i = 0; i < numContacts; i++) {
         // --- Simple, Direct Constraint Calculation ---
         // Goal: C = 0 when objects are just touching, C < 0 when penetrating
         Contact& contact = contacts[i];
-
-        // print(contact.C0);
-        // print(contact.JAn);
-        // print(contact.JAt1);
-        // print(contact.JAt2);
-        // print(contact.JBn);
-        // print(contact.JBt1);
-        // print(contact.JBt2);
-
-        // print(bodyA->position - bodyA->initialPosition);
-        // print(bodyA->deltaWInitial());
-        // print(bodyB->position - bodyB->initialPosition);
-        // print(bodyB->deltaWInitial());
 
         vec6 dpA = { bodyA->position - bodyA->initialPosition, bodyA->deltaWInitial() };
         vec6 dpB = { bodyB->position - bodyB->initialPosition, bodyB->deltaWInitial() };
@@ -121,12 +180,9 @@ void Manifold::computeConstraint(float alpha) {
         // --- Sticking Logic ---
         contact.stick = abs(lambda[i * 3 + 1]) < frictionBound && abs(contact.C0.z) < STICK_THRESH; // TODO check this convertsion to 3d
     }
-
-    // print("end compute constraint");
 }
 
 void Manifold::computeDerivatives(Rigid* body) {
-    // print("begin compute derivatives");
     // Just store precomputed derivatives in J for the desired body
     for (int i = 0; i < numContacts; i++)
     {
@@ -138,5 +194,4 @@ void Manifold::computeDerivatives(Rigid* body) {
         J[i * 3 + 1] = isA ? contact.JAt1 : contact.JBt1;
         J[i * 3 + 2] = isA ? contact.JAt2 : contact.JBt2;
     }
-    // print("end compute derivaties");
 }
