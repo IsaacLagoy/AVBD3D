@@ -129,8 +129,7 @@ void Solver::step(float dt) {
 
                     // accumulate force (eq. 13) and hessian (eq. 17)
                     rhs += force->J[i] * f;
-                    lhs += outer(force->J[i], force->J[i] * force->penalty[i]);
-                    // lhs.addBottomRight(G);
+                    lhs += outer(force->J[i], force->J[i] * force->penalty[i]); // + diagonalLump(force->H[i] * abs(f));
                 }
             }
 

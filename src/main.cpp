@@ -15,14 +15,14 @@ int main() {
     solver.iterations = 10;
 
     vec3 offset = vec3(uniform(-2, 2), uniform(-2, 2),uniform(-2, 2));
-    float diff = 1.0f;
+    float diff = 0.0f;
 
     // Create ground plane (large flat box)
-    new Rigid(&solver, {5, 0.25f, 5}, -1.0f, 0.5f, {0, -1.0f, 0});
+    new Rigid(&solver, {15, 0.25f, 15}, -1.0f, 0.5f, {0, -1.0f, 0});
 
-    // scale = 
-    for (int i = 0; i < 30; ++i) {
-        new Rigid(&solver, vec3(uniform(0.5f, 1.5f), uniform(0.5f, 1.5f), uniform(0.5f, 1.5f)), 10.0f, 0.4f, vec3(0.0f, 3.0f, 0.0f) + vec3(uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff)), quat(uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff)), vec6());
+    // scale = vec3(uniform(0.5f, 1.5f), uniform(0.5f, 1.5f), uniform(0.5f, 1.5f))
+    for (int i = 0; i < 5; ++i) {
+        new Rigid(&solver, vec3(1.0f), 10.0f, 0.4f, vec3(0.0f, i * 3, 0.0f) + vec3(uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff)), quat(uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff), uniform(-diff, diff)), vec6());
     }
 
     // 2. Create rendering engine and pass bodies

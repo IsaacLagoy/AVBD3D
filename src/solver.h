@@ -365,6 +365,8 @@ vec3 inverseTransform(const glm::vec3& worldPoint, Rigid* body);
 vec3 rotateNScale(const vec3& vertex, Rigid* body);
 vec3 rotateNScale(int index, Rigid* body);
 
+mat6x6 diagonalLump(const mat6x6& mat);
+
 // linear algebra
 vec6 solve(const mat6x6& lhs, const vec6& rhs);
 

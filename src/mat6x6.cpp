@@ -67,7 +67,7 @@ vec6 mat6x6::operator*(const vec6& rhs) const {
 void mat6x6::addBottomRight(const mat3x3& mat) {
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            (*this)[i][j] += mat[i][j];
+            (*this)[i + 3][j + 3] += mat[i][j];
         }
     }
 }

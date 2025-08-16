@@ -60,6 +60,10 @@ bool Manifold::initialize() {
     // check if old contacts should still be used
     if (numContacts < 4 && sumContacts > 0) {
 
+        // print("points");
+        // print(sumContacts);
+        // print(numContacts);
+
         // check if contact is still in the same place
         for (int i = 0; i < oldNumContacts; i++) {
             if (!canBeUsed[i]) continue;
@@ -68,7 +72,7 @@ bool Manifold::initialize() {
             // ensure all minkowski difference support points are still in location
             for (int j = 0; j < 3; j++) {
                 vec3 curMink = transform(contact.face.sps[j].indexA, bodyB) - transform(contact.face.sps[j].indexB, bodyA);
-                if (glm::length2(curMink - contact.face.sps[j].mink) > COLLISION_MARGIN) {
+                if (glm::dot(curMink - contact.face.sps[j].mink, contact.normal) > 0) {
                     canBeUsed[i] = false;
                     sumContacts--;
                     break;
@@ -190,8 +194,21 @@ void Manifold::computeDerivatives(Rigid* body) {
         
         bool isA = body == bodyA;
 
+        // compute Jacobians
         J[i * 3 + 0] = isA ? contact.JAn  : contact.JBn;
         J[i * 3 + 1] = isA ? contact.JAt1 : contact.JBt1;
         J[i * 3 + 2] = isA ? contact.JAt2 : contact.JBt2;
+
+        // // compute Hessians
+        // for (int j = 0; j < 3; j++) {
+        //     // vec3 dir = J[i * 3 + j].linear;
+        //     // vec3 s = isA ? rotateNScale(contact.rA, bodyA) : rotateNScale(contact.rB, bodyB);
+        //     // H[i * 3 + j] = mat6x6();
+        //     // H[i * 3 + j].addBottomRight(lambda[i] * (0.5f * (outer(dir, s) + outer(s, dir) - glm::dot(dir, s) * glm::diagonal3x3(vec3(1.0f)))));
+
+        //     H[i * 3 + j] = mat6x6();
+        //     mat3x3 inertia = isA ? bodyA->getInertiaTensor() : bodyB->getInertiaTensor();
+        //     H[i * 3 + j].addBottomRight(glm::diagonal3x3(glm::abs(glm::cross(J[i * 3 + j].angular, inertia * J[i * 3 + j].angular))));
+        // }
     }
 }
