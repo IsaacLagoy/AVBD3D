@@ -31,7 +31,6 @@ struct Polytope {
 };
 
 // function declarations
-SupportPoint getSupportPoint(Rigid* bodyA, Rigid* bodyB, const vec3& dir);
 bool handleSimplex(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
 bool      simplex0(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
 bool      simplex1(Simplex& simplex, Rigid* bodyA, Rigid* bodyB, vec3& dir);
@@ -43,3 +42,8 @@ bool gjk(Rigid* bodyA, Rigid* bodyB, Simplex& simplex);
 bool epa(Rigid* bodyA, Rigid* bodyB, Polytope* polytope);
 
 int getContact(std::vector<vec3>& rAs, std::vector<vec3>& rBs, Polytope* polytope, Rigid* bodyA, Rigid* bodyB);
+vec3 projectPointOntoPlane(const vec3& point, const vec3& normal, const vec3& planePoint);
+vec3 closestPointOnSegmentToVertex(const vec3& u0, const vec3& u1, const vec3& v);
+std::pair<vec3, vec3> closestPointBetweenSegments(const vec3& p0, const vec3& p1, const vec3& q0, const vec3& q1);
+void closestPointsOnTriangleToSegment(std::vector<vec3>& pts, const vec3& v0, const vec3& v1, const vec3& a, const vec3& b, const vec3& c);
+void clipFace(std::vector<vec3>& pts, const vec3& a0, const vec3& b0, const vec3& c0, const vec3& a1, const vec3& b1, const vec3& c1);

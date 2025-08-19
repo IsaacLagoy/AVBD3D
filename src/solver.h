@@ -8,7 +8,7 @@
 #define MAX_ROWS 12           // Max scalar rows an individual constraint can have (3D contact = 3n)
 #define PENALTY_MIN 1000.0f   // Minimum penalty parameter
 #define PENALTY_MAX 1e9f      // Maximum penalty parameter
-#define COLLISION_MARGIN 0.02f
+#define COLLISION_MARGIN 0.04f
 #define STICK_THRESH 0.02f
 #define SHOW_CONTACTS true
 
@@ -86,7 +86,7 @@ struct Rigid {
 
     // position and rotation stored seperately since rotation is quaternion
     vec3 position; 
-    quat rotation = quat(1, 0, 0, 0);
+    quat rotation = quat(1, 0, 0, 0); 
 
     vec6 velocity = vec6(0); // linear 3, angular 3
     vec6 prevVelocity = vec6(0);
@@ -116,6 +116,9 @@ struct Rigid {
 
     vec3 deltaWInitial() const;
     vec3 deltaWInertial() const;
+
+    // static
+    static int globalID;
 };
 
 // Provides constraint parameters and common interface for all forces.
@@ -149,6 +152,9 @@ struct Force {
     virtual bool initialize() = 0; // called once when added to solver
     virtual void computeConstraint(float alpha) = 0; // C and limits per row
     virtual void computeDerivatives(Rigid* body) = 0; // J and H per body
+
+    // static
+    static int globalID;
 };
 
 // ball-and-socket joint
@@ -214,6 +220,7 @@ struct Manifold : Force {
     bool initialize() override;
     void computeConstraint(float alpha) override;
     void computeDerivatives(Rigid* body) override;
+    bool isContactStillValid(const Contact& oldContact, Rigid* bodyA, Rigid* bodyB);
 
     static int collide(Rigid* bodyA, Rigid* bodyB, Contact* contacts);
 };
@@ -368,9 +375,9 @@ vec3 rotateNScale(int index, Rigid* body);
 
 mat6x6 diagonalLump(const mat6x6& mat);
 
+SupportPoint getSupportPoint(Rigid* bodyA, Rigid* bodyB, const vec3& dir);
+
 // linear algebra
 vec6 solve(const mat6x6& lhs, const vec6& rhs);
-
-
 
 #endif

@@ -2,7 +2,7 @@
 
 Rigid::Rigid(Solver* solver, vec3 size, float density, float friction,
              vec3 position, quat rotation, vec6 velocity, vec4 color)
-    :   solver(solver), 
+    :   solver(solver),
         forces(nullptr), 
         next(nullptr),
         position(position), 

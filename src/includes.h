@@ -7,6 +7,9 @@
 #include <set>
 #include <memory>
 #include <unordered_map>
+#include <vector>
+#include <array>
+#include <optional>
 
 // import glad and glfw
 #include <glad/glad.h>

@@ -21,35 +21,19 @@ bool Manifold::initialize() {
     bool oldStick[4]; for (int i = 0; i < numContacts; i++) oldStick[i] = contacts[i].stick;
     int oldType[4]; for (int i = 0; i < numContacts; i++) oldType[i] = contacts[i].type;
     bool oldContactUsed[4]; for (int i = 0; i < numContacts; i++) oldContactUsed[i] = false;
+
     int oldNumContacts = numContacts;
-
-    // Compute new contacts
-    numContacts = collide(bodyA, bodyB, contacts);
-    if (numContacts == 0) return false;
-
-    // Merge old contact data with new contacts
-    for (int i = 0; i < numContacts; i++) {
-        penalty[i * 3 + 0] = penalty[i * 3 + 1] = penalty[i * 3 + 2] = 0.0f;
-        lambda[i * 3 + 0] = lambda[i * 3 + 1] = lambda[i * 3 + 2] = 0.0f;
-
-        for (int j = 0; j < oldNumContacts; j++) {
-            if (contacts[i] == oldContacts[j]) {
-                for (int k = 0; k < 3; k++) penalty[i * 3 + k] = oldPenalty[j * 3 + k];
-                for (int k = 0; k < 3; k++) lambda[i * 3 + k] = oldLambda[j * 3 + k];
-                contacts[i].stick = oldStick[j];
-                contacts[i].type = oldType[j];
-
-                // If static friction in last frame, use the old contact points
-                // TODO I'm not sure if this does anything 
-                if (oldStick[j]) {
-                    contacts[i].rA = oldContacts[j].rA;
-                    contacts[i].rB = oldContacts[j].rB;
-                }
-
-                oldContactUsed[j] = true;
-            }
+    for (int i = 0; i < oldNumContacts; i++) {
+        oldContacts[i] = contacts[i];
+        for (int k = 0; k < 3; k++) {
+            oldPenalty[i * 3 + k] = penalty[i * 3 + k];
+            oldLambda[i * 3 + k]  = lambda[i * 3 + k];
         }
     }
+
+    // compute new contacts
+    numContacts = collide(bodyA, bodyB, contacts);
+    if (numContacts == 0) return false;
 
     // calculate 
     bool canBeUsed[4]; 
@@ -136,6 +120,7 @@ bool Manifold::initialize() {
         }
     }
 
+
     // initialize contact data
     for (int i = 0; i < numContacts; i++) {
         Contact& contact = contacts[i];
@@ -160,7 +145,7 @@ bool Manifold::initialize() {
         contact.JBt2 = vec6(-1.0f * contact.t2    , -1.0f * glm::cross(wB, contact.t2)    );
 
         vec3 drX = bodyA->position + wA - bodyB->position - wB;
-        contact.C0.x = glm::dot(contact.normal, drX) + COLLISION_MARGIN;
+        contact.C0.x = glm::dot(contact.normal, drX); // + COLLISION_MARGIN;
         contact.C0.y = glm::dot(contact.t1,     drX);
         contact.C0.z = glm::dot(contact.t2,     drX);
     }
@@ -209,16 +194,63 @@ void Manifold::computeDerivatives(Rigid* body) {
         J[i * 3 + 1] = isA ? contact.JAt1 : contact.JBt1;
         J[i * 3 + 2] = isA ? contact.JAt2 : contact.JBt2;
 
-        // // compute Hessians
-        // for (int j = 0; j < 3; j++) {
-        //     // vec3 dir = J[i * 3 + j].linear;
-        //     // vec3 s = isA ? rotateNScale(contact.rA, bodyA) : rotateNScale(contact.rB, bodyB);
-        //     // H[i * 3 + j] = mat6x6();
-        //     // H[i * 3 + j].addBottomRight(lambda[i] * (0.5f * (outer(dir, s) + outer(s, dir) - glm::dot(dir, s) * glm::diagonal3x3(vec3(1.0f)))));
+        // compute Hessians
+        for (int j = 0; j < 3; j++) {
+            vec3 dir = J[i * 3 + j].linear;
+            vec3 s = isA ? rotateNScale(contact.rA, bodyA) : rotateNScale(contact.rB, bodyB);
+            H[i * 3 + j] = mat6x6();
+            H[i * 3 + j].addBottomRight(lambda[i] * (0.5f * (outer(dir, s) + outer(s, dir) - glm::dot(dir, s) * glm::diagonal3x3(vec3(1.0f)))));
 
-        //     H[i * 3 + j] = mat6x6();
-        //     mat3x3 inertia = isA ? bodyA->getInertiaTensor() : bodyB->getInertiaTensor();
-        //     H[i * 3 + j].addBottomRight(glm::diagonal3x3(glm::abs(glm::cross(J[i * 3 + j].angular, inertia * J[i * 3 + j].angular))));
-        // }
+            // H[i * 3 + j] = mat6x6();
+            // mat3x3 inertia = isA ? bodyA->getInertiaTensor() : bodyB->getInertiaTensor();
+            // H[i * 3 + j].addBottomRight(glm::diagonal3x3(glm::abs(glm::cross(J[i * 3 + j].angular, inertia * J[i * 3 + j].angular))));
+        }
     }
+}
+
+bool Manifold::isContactStillValid(const Contact& c, Rigid* A, Rigid* B)
+{
+    // Tolerances
+    const float margin = COLLISION_MARGIN;
+    const float keepSlack = 2.0f * margin;      // allow a little separation
+    const float maxNormalAngleCos = 0.8f;       // ~36°; relax/tighten as needed
+    const float maxTangentialSlip = 2.0f * margin;
+
+    // --- 1) Quick SAT along the OLD normal ---
+    // If the separation along the old normal is small or negative (penetrating), keep it.
+    // supportX(dir) should return WORLD-SPACE support point on shape X in direction 'dir'.
+    const SupportPoint s = getSupportPoint(A, B, c.normal);      // world
+    const vec3 sA = transform(s.indexA, A);
+    const vec3 sB = transform(s.indexB, B);
+    const float sep = glm::dot(sB - sA, c.normal);
+    if (sep > keepSlack) return false;
+
+    // --- 2) Optional: reject if the best direction drifted too far ---
+    // (Re-estimate a direction from those supports; cheap & stable.)
+    const vec3 span = sB - sA;
+    if (glm::length2(span) > 1e-12f) {
+        const vec3 nNew = glm::normalize(span);
+        if (glm::dot(nNew, c.normal) < maxNormalAngleCos) {
+            return false;
+        }
+    }
+
+    // --- 3) Optional: if we "stuck" the anchors, limit tangential slip ---
+    // IMPORTANT: this assumes rA/rB are LOCAL anchors. If you sometimes store world-space,
+    // either always store local or branch here to skip the transform for world-space anchors.
+    if (c.stick) {
+        const vec3 pA = transform(c.rA, A); // xA + RA * rA_local
+        const vec3 pB = transform(c.rB, B); // xB + RB * rB_local
+
+        const vec3 d   = pB - pA;
+        const float dn = glm::dot(d, c.normal);
+        const vec3 dt  = d - dn * c.normal;    // lateral drift
+
+        if (glm::length2(dt) > maxTangentialSlip * maxTangentialSlip) {
+            return false;
+        }
+        // (Optionally also bound |dn| against keepSlack if you want tighter control.)
+    }
+
+    return true;
 }
