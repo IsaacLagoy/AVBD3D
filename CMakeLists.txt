@@ -45,7 +45,10 @@ file(GLOB_RECURSE SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
 # define target
 add_executable(render ${SRC_FILES})
-target_include_directories(render PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(render PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
 target_link_libraries(render glad glfw glm assimp stb)
 
 # attach compile options only to "render"

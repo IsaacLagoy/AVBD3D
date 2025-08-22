@@ -1,4 +1,4 @@
-#include "includes.h"
+#include "mat6x6.h"
 
 // used for creating mass matrix
 mat6x6::mat6x6(const mat3x3& tl, const mat3x3& tr, const mat3x3& bl, const mat3x3& br) {

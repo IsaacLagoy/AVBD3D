@@ -1,10 +1,11 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
-#pragma once
-
 #include "shader.h"
 #include "solver.h" // Include your PhysicsEngine and RigidBody definitions
+#include "mesh.h"
+#include "rigid.h"
+#include <cstdio>
 
 class Camera {
     float moveSpeed = 5.0f;

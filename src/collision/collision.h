@@ -1,4 +1,13 @@
+#ifndef COLLISION_H
+#define COLLISION_H
+
 #include "solver.h"
+#include "rigid.h"
+#include "util/unorderedArray.h"
+#include "mesh.h"
+#include "linalg/linalg.h"
+#include <cmath>
+#include <optional>
 
 #define DEBUG_PRINT_GJK false
 
@@ -47,3 +56,5 @@ vec3 closestPointOnSegmentToVertex(const vec3& u0, const vec3& u1, const vec3& v
 std::pair<vec3, vec3> closestPointBetweenSegments(const vec3& p0, const vec3& p1, const vec3& q0, const vec3& q1);
 void closestPointsOnTriangleToSegment(std::vector<vec3>& pts, const vec3& v0, const vec3& v1, const vec3& a, const vec3& b, const vec3& c);
 void clipFace(std::vector<vec3>& pts, const vec3& a0, const vec3& b0, const vec3& c0, const vec3& a1, const vec3& b1, const vec3& c1);
+
+#endif

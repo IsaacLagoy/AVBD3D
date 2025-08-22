@@ -1,4 +1,4 @@
-#include "includes.h"
+#include "vec6.h"
 
 // copy operator
 vec6& vec6::operator=(const vec6& vec) {
@@ -56,4 +56,9 @@ vec6 vec6::operator*(float rhs) const {
 vec6 vec6::operator/(float rhs) const {
     if (rhs == 0.0f) throw std::runtime_error("Cannot divide by 0.");
     return { linear / rhs, angular / rhs };
+}
+
+// math
+float dot(vec6 v1, vec6 v2) {
+    return glm::dot(v1.linear, v2.linear) + glm::dot(v1.angular, v2.angular);
 }

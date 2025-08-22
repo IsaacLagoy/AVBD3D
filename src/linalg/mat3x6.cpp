@@ -1,4 +1,4 @@
-#include "includes.h"
+#include "mat3x6.h"
 
 mat3x6::mat3x6(const vec6& r1, const vec6& r2, const vec6& r3) {
     rows[0] = r1;

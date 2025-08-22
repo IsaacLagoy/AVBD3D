@@ -1,9 +1,12 @@
 #ifndef SOLVER_H
 #define SOLVER_H
 
-#pragma once
-
-#include "includes.h"
+#include "util/includes.h"
+#include "collision/face.h"
+#include "linalg/ldlt.h"
+#include "debug/debug.h"
+#include "linalg/linalg.h"
+#include <array>
 
 #define MAX_ROWS 12           // Max scalar rows an individual constraint can have (3D contact = 3n)
 #define PENALTY_MIN 1000.0f   // Minimum penalty parameter
@@ -12,71 +15,13 @@
 #define STICK_THRESH 0.02f
 #define SHOW_CONTACTS true
 
+// early declare structs
 struct Rigid;
 struct Force;
 struct Manifold;
 struct Solver;
 struct Mesh;
-
-// support point
-struct SupportPoint {
-    int indexA = 0;
-    int indexB = 0;
-    vec3 mink = vec3(); // position in Minkowski difference space
-
-    // comparison operator for set
-    bool operator<(const SupportPoint& other) const {
-        if (indexA != other.indexA) return indexA < other.indexA;
-        return indexB < other.indexB;
-    }
-
-    SupportPoint() = default;
-};
-
-struct SupportPointHash {
-    size_t operator()(const SupportPoint& sp) const {
-        size_t h1 = std::hash<int>{}(sp.indexA);
-        size_t h2 = std::hash<int>{}(sp.indexB);
-        return h1 ^ (h2 << 1);  // combine hashes
-    }
-};
-
-struct SupportPointEqual {
-    bool operator()(const SupportPoint& a, const SupportPoint& b) const {
-        return a.indexA == b.indexA && a.indexB == b.indexB;
-    }
-};
-
-// edge
-using Edge = std::pair<const SupportPoint*, const SupportPoint*>;
-
-// polytope face
-struct Face {
-    std::array<const SupportPoint*, 3> sps;
-    vec3 normal;
-    float distance;
-
-    bool operator==(const Face& other) const {
-        return sps == other.sps;
-    }
-
-    // overrides edge reference with indexed edge from face
-    void overrideEdge(int i, Edge& edge) const {
-        edge = { sps[i % 3], sps[(i + 1) % 3] }; 
-    }
-};
-
-struct StackFace {
-    std::array<SupportPoint, 3> sps;
-    vec3 normal;
-    float distance;
-
-    StackFace(const Face& face) : sps(), normal(face.normal), distance(face.distance) {
-        for (int i = 0; i < 3; i++) sps[i] = *face.sps[i];
-    }
-
-    StackFace() = default;
-};
+struct StackFace;
 
 // contains data for a single rigid body
 struct Rigid {
@@ -157,31 +102,7 @@ struct Force {
     static int globalID;
 };
 
-// ball-and-socket joint
-struct Joint : Force {
-    vec3 rA, rB; // anchor offsets in local body space
-    vec3 C0; // orientation error reference
-
-    Joint(Solver* solver, Rigid* bodyA, Rigid* bodyB, vec3 rA, vec3 rB, vec3 stiffness = vec3(INFINITY));
-
-    int rows() const override { return 3; }
-    bool initialize() override;
-    void computeConstraint(float alpha) override;
-    void computeDerivatives(Rigid* body) override;
-};
-
-// no-op force used to ignore collision between two bodies
-struct IgnoreCollision : Force {
-    IgnoreCollision(Solver* solver, Rigid* bodyA, Rigid* bodyB) : Force(solver, bodyA, bodyB) {}
-
-    int rows() const override { return 0; }
-    bool initialize() override { return true; }
-    void computeConstraint(float alpha) override {}
-    void computeDerivatives(Rigid* body) override {}
-};
-
 struct Manifold : Force {
-
     struct Contact {
         vec3 rA;
         vec3 rB;
@@ -247,137 +168,10 @@ struct Solver {
     void step(float dt);
 };
 
-struct Mesh {
-    // Cube vertices (position only)
-    inline static const float verts[72] = {
-        // Positions          // Normals
-        // Front face (+Z)
-        -0.5f, -0.5f,  0.5f,  
-        0.5f, -0.5f,  0.5f,  
-        0.5f,  0.5f,  0.5f,  
-        -0.5f,  0.5f,  0.5f,  
-
-        // Back face (-Z)
-        -0.5f, -0.5f, -0.5f,  
-        -0.5f,  0.5f, -0.5f,  
-        0.5f,  0.5f, -0.5f,  
-        0.5f, -0.5f, -0.5f,  
-
-        // Left face (-X)
-        -0.5f, -0.5f, -0.5f, 
-        -0.5f, -0.5f,  0.5f, 
-        -0.5f,  0.5f,  0.5f, 
-        -0.5f,  0.5f, -0.5f, 
-
-        // Right face (+X)
-        0.5f, -0.5f, -0.5f,  
-        0.5f,  0.5f, -0.5f,
-        0.5f,  0.5f,  0.5f,
-        0.5f, -0.5f,  0.5f,
-
-        // Bottom face (-Y)
-        -0.5f, -0.5f, -0.5f,  
-        0.5f, -0.5f, -0.5f,
-        0.5f, -0.5f,  0.5f,
-        -0.5f, -0.5f,  0.5f,
-
-        // Top face (+Y)
-        -0.5f,  0.5f, -0.5f, 
-        -0.5f,  0.5f,  0.5f, 
-        0.5f,  0.5f,  0.5f, 
-        0.5f,  0.5f, -0.5f,
-    };
-
-    inline static const float norms[72] {
-        0, 0, 1,
-        0, 0, 1,
-        0, 0, 1,
-        0, 0, 1,
-
-        0, 0, -1,
-        0, 0, -1,
-        0, 0, -1,
-        0, 0, -1,
-
-        -1, 0, 0,
-        -1, 0, 0,
-        -1, 0, 0,
-        -1, 0, 0,
-
-        1, 0, 0,
-        1, 0, 0,
-        1, 0, 0,
-        1, 0, 0,
-
-        0, -1, 0,
-        0, -1, 0,
-        0, -1, 0,
-        0, -1, 0,
-
-        0, 1, 0,
-        0, 1, 0,
-        0, 1, 0,
-        0, 1, 0,
-    };
-
-    // Cube indices for drawing with glDrawElements
-    inline static const unsigned int inds[36] = {
-        // Front face
-        0, 1, 2,
-        2, 3, 0,
-
-        // Back face
-        4, 5, 6,
-        6, 7, 4,
-
-        // Left face
-        8, 9, 10,
-        10, 11, 8,
-
-        // Right face
-        12, 13, 14,
-        14, 15, 12,
-
-        // Bottom face
-        16, 17, 18,
-        18, 19, 16,
-
-        // Top face
-        20, 21, 22,
-        22, 23, 20
-    };
-
-    inline static const int numUniqueVerts = 8;
-    inline static const vec3 uniqueVerts[8] = {
-        vec3(-0.5, -0.5, -0.5),
-        vec3(-0.5, -0.5, 0.5),
-        vec3(-0.5, 0.5, -0.5),
-        vec3(-0.5, 0.5, 0.5),
-        vec3(0.5, -0.5, -0.5),
-        vec3(0.5, -0.5, 0.5),
-        vec3(0.5, 0.5, -0.5),
-        vec3(0.5, 0.5, 0.5)
-    };
-
-    static int bestDot(vec3 dir);
-};
-
 // helper functions
-mat4x4 buildModelMatrix(const Rigid* b);
-mat4x4 buildInverseModelMatrix(const Rigid* b);
-mat4x4 buildModelMatrix(const vec3& pos, const vec3& sca, const quat& rot);
-vec3 transform(const vec3& vertex, Rigid* body);
-vec3 transform(int index, Rigid* body);
-vec3 inverseTransform(const glm::vec3& worldPoint, Rigid* body);
-
 vec3 rotateNScale(const vec3& vertex, Rigid* body);
 vec3 rotateNScale(int index, Rigid* body);
-
 mat6x6 diagonalLump(const mat6x6& mat);
-
 SupportPoint getSupportPoint(Rigid* bodyA, Rigid* bodyB, const vec3& dir);
-
-// linear algebra
-vec6 solve(const mat6x6& lhs, const vec6& rhs);
 
 #endif

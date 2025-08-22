@@ -1,4 +1,4 @@
-#include "solver.h"
+#include "rigid.h"
 
 Manifold::Manifold(Solver* solver, Rigid* bodyA, Rigid* bodyB) 
     : Force(solver, bodyA, bodyB), numContacts(0) 

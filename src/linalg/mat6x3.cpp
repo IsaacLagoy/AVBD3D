@@ -1,4 +1,4 @@
-#include "includes.h"
+#include "mat6x3.h"
 
 mat6x3::mat6x3(const mat3x6& transpose) {
     for (int i = 0; i < 6; i++) rows[i] = vec3(transpose[0][i], transpose[1][i], transpose[2][i]);
@@ -30,4 +30,8 @@ mat6x6 mat6x3::operator*(const mat3x6& rhs) const {
     }
 
     return mat;
+}
+
+mat6x3 transpose(const mat3x6& mat) {
+    return mat6x3(mat); // baked in transpose constructor
 }

@@ -1,5 +1,4 @@
 #include "collision.h"
-#include <cmath>
 
 // helper functions
 vec3 transform(const vec3& vertex, Rigid* body) {

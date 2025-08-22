@@ -1,4 +1,4 @@
-#include "solver.h"
+#include "ldlt.h"
 
 vec6 solve(const mat6x6& lhs, const vec6& rhs) {
     mat6x6 L = mat6x6();

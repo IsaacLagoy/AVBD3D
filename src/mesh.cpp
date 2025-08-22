@@ -1,4 +1,4 @@
-#include "solver.h"
+#include "mesh.h"
 
 int Mesh::bestDot(vec3 dir) {
     bool four = dir.x >= 0;

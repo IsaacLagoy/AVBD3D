@@ -6,7 +6,6 @@
  */
 
 #include "engine.h"
-#include <cstdio>
 
 // mouse callback commands
 void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
