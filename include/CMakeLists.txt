@@ -1,7 +1,7 @@
 # include glfw
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(GLFW_BUILD_WAYLAND ON CACHE BOOL "")
-    set(GLFW_BUILD_X11    OFF CACHE BOOL "")
+    set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "")
+    set(GLFW_BUILD_X11    ON CACHE BOOL "")
 endif()
 
 include(FetchContent)
