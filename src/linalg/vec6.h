@@ -2,7 +2,7 @@
 #define VEC6_H
 
 #include "util/includes.h"
-#include "debug/debug.h"
+#include "debug_utils/debug.h"
 
 // commonly used data structures
 struct vec6 {
