@@ -4,7 +4,7 @@
 #include "util/includes.h"
 #include "collision/face.h"
 #include "linalg/ldlt.h"
-#include "debug/debug.h"
+#include "debug_utils/debug.h"
 #include "linalg/linalg.h"
 #include <array>
 
